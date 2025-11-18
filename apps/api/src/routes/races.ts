@@ -63,7 +63,7 @@ export async function racesRoutes(
         ])
 
         const response = {
-          data: races,
+          races, // Frontend expects 'races' key
           meta: {
             total,
             limit: query.limit,
