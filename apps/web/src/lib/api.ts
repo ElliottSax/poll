@@ -172,6 +172,29 @@ class ApiClient {
   async getPollster(slug: string) {
     return this.request<Pollster>(`/api/pollsters/${slug}`)
   }
+
+  async getPollsterPolls(slug: string, params?: { limit?: number; offset?: number }) {
+    const searchParams = new URLSearchParams()
+    if (params?.limit) searchParams.set('limit', params.limit.toString())
+    if (params?.offset) searchParams.set('offset', params.offset.toString())
+
+    const query = searchParams.toString()
+    return this.request<{ polls: Poll[]; total: number; limit: number; offset: number }>(
+      `/api/pollsters/${slug}/polls${query ? `?${query}` : ''}`
+    )
+  }
+
+  // Polling Averages
+  async getRaceAverage(slug: string, days: number = 14) {
+    return this.request<{
+      raceSlug: string
+      raceName: string
+      timeframe: number
+      pollsIncluded: number
+      averages: Record<string, number>
+      lastUpdated: string
+    }>(`/api/races/${slug}/average?days=${days}`)
+  }
 }
 
 export const api = new ApiClient()
