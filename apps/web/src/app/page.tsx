@@ -57,6 +57,22 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <h1 className="text-3xl font-bold text-gray-900">Polling Dashboard</h1>
           <p className="mt-2 text-gray-600">Real-time election polling data and forecasts</p>
+
+          {/* Navigation */}
+          <nav className="mt-4 flex gap-4">
+            <a
+              href="/"
+              className="text-sm font-medium text-blue-600 border-b-2 border-blue-600 pb-1"
+            >
+              Races
+            </a>
+            <a
+              href="/pollsters"
+              className="text-sm font-medium text-gray-600 hover:text-gray-900 pb-1"
+            >
+              Pollsters
+            </a>
+          </nav>
         </div>
       </header>
 
