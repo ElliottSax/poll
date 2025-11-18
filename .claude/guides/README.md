@@ -74,16 +74,54 @@ Design and implement the database schema, migrations, seed data, and utilities.
 
 ---
 
-### Additional Tracks (Guides Coming Soon)
+#### [📄 Track 5: Frontend Pages](./TRACK_05_FRONTEND_PAGES.md)
+**Duration**: 3-4 weeks | **Priority**: P0 (Critical)
 
-#### Track 5: Frontend Pages
-Build Next.js pages that consume the API and use components.
+Build all customer-facing pages with Next.js App Router, React Query, and SEO optimization.
 
-#### Track 7: Testing Infrastructure
-Set up Jest, React Testing Library, and Playwright for comprehensive testing.
+**Key Tasks**:
+- Build homepage with featured content
+- Create race listing and detail pages
+- Create pollster listing and detail pages
+- Add about and methodology pages
+- Implement SEO and metadata
+- Add sitemap generation
 
-#### Track 8: DevOps & Infrastructure
-Configure Docker, CI/CD, deployment, and monitoring.
+**Start Here**: Set up React Query and create API client
+
+---
+
+#### [🧪 Track 7: Testing Infrastructure](./TRACK_07_TESTING.md)
+**Duration**: 2-3 weeks | **Priority**: P1 (High)
+
+Set up comprehensive testing with Jest, React Testing Library, and Playwright.
+
+**Key Tasks**:
+- Configure Jest for all workspaces
+- Set up React Testing Library
+- Configure Playwright for E2E tests
+- Write test examples
+- Set up coverage reporting
+- Integrate with CI/CD
+
+**Start Here**: Install testing dependencies and configure Jest
+
+---
+
+#### [🚀 Track 8: DevOps & Infrastructure](./TRACK_08_DEVOPS.md)
+**Duration**: 2-3 weeks | **Priority**: P1 (High)
+
+Configure Docker, CI/CD, deployment, monitoring, and security.
+
+**Key Tasks**:
+- Create Dockerfiles and Docker Compose
+- Set up GitHub Actions workflows
+- Configure container registry
+- Set up monitoring and error tracking
+- Add security scanning
+- Create backup strategies
+
+**Start Here**: Create Dockerfiles for API and Web
 
 ---
 
