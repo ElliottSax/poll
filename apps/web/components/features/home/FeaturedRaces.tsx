@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { RaceCard } from '@/components/features/RaceCard'
+import { Grid } from '@/components/layout/Container'
 
 // This will be replaced with actual data from API
 const mockRaces = [
@@ -9,119 +9,102 @@ const mockRaces = [
     id: '1',
     slug: '2024-presidential',
     name: '2024 Presidential Election',
-    type: 'Presidential',
-    rating: 'Toss-up',
+    state: 'National',
+    office: 'President',
+    year: 2024,
     candidates: [
-      { name: 'Joe Biden', party: 'D', percentage: 48.2 },
-      { name: 'Donald Trump', party: 'R', percentage: 47.8 },
+      {
+        id: 'biden',
+        name: 'Joe Biden',
+        party: 'democrat' as const,
+        percentage: 48.2,
+        trend: 'stable' as const
+      },
+      {
+        id: 'trump',
+        name: 'Donald Trump',
+        party: 'republican' as const,
+        percentage: 47.8,
+        trend: 'stable' as const
+      },
     ],
     pollCount: 127,
-    lastUpdate: '2 hours ago',
+    lastUpdated: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
   },
   {
     id: '2',
     slug: 'pa-senate-2024',
-    name: 'Pennsylvania Senate',
-    type: 'Senate',
-    rating: 'Lean D',
+    name: 'Pennsylvania Senate Race',
+    state: 'Pennsylvania',
+    office: 'U.S. Senate',
+    year: 2024,
     candidates: [
-      { name: 'Bob Casey', party: 'D', percentage: 49.5 },
-      { name: 'Dave McCormick', party: 'R', percentage: 45.2 },
+      {
+        id: 'casey',
+        name: 'Bob Casey',
+        party: 'democrat' as const,
+        percentage: 49.5,
+        trend: 'up' as const,
+        trendValue: 1.2
+      },
+      {
+        id: 'mccormick',
+        name: 'Dave McCormick',
+        party: 'republican' as const,
+        percentage: 45.2,
+        trend: 'down' as const,
+        trendValue: -0.8
+      },
     ],
     pollCount: 23,
-    lastUpdate: '5 hours ago',
+    lastUpdated: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
   },
   {
     id: '3',
     slug: 'ga-senate-2024',
-    name: 'Georgia Senate',
-    type: 'Senate',
-    rating: 'Toss-up',
+    name: 'Georgia Senate Race',
+    state: 'Georgia',
+    office: 'U.S. Senate',
+    year: 2024,
     candidates: [
-      { name: 'Raphael Warnock', party: 'D', percentage: 48.7 },
-      { name: 'Herschel Walker', party: 'R', percentage: 48.1 },
+      {
+        id: 'warnock',
+        name: 'Raphael Warnock',
+        party: 'democrat' as const,
+        percentage: 48.7,
+        trend: 'up' as const,
+        trendValue: 0.5
+      },
+      {
+        id: 'walker',
+        name: 'Herschel Walker',
+        party: 'republican' as const,
+        percentage: 48.1,
+        trend: 'stable' as const
+      },
     ],
     pollCount: 31,
-    lastUpdate: '1 day ago',
+    lastUpdated: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
   },
 ]
 
 export function FeaturedRaces() {
-  const getRatingColor = (rating: string) => {
-    if (rating.includes('D')) return 'text-democrat'
-    if (rating.includes('R')) return 'text-republican'
-    return 'text-tossup'
-  }
-
-  const getPartyColor = (party: string) => {
-    return party === 'D' ? 'bg-democrat' : 'bg-republican'
-  }
-
   return (
-    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <Grid cols={3} gap="lg">
       {mockRaces.map((race) => (
-        <Link
+        <RaceCard
           key={race.id}
+          id={race.id}
+          title={race.name}
+          state={race.state}
+          office={race.office}
+          year={race.year}
+          candidates={race.candidates}
+          lastUpdated={race.lastUpdated}
+          pollCount={race.pollCount}
           href={`/races/${race.slug}`}
-          className="block p-6 bg-card border border-border rounded-lg hover:shadow-lg transition-shadow"
-        >
-          {/* Header */}
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <div className="text-xs text-muted-foreground mb-1">
-                {race.type}
-              </div>
-              <h3 className="font-semibold text-lg">{race.name}</h3>
-            </div>
-            <span
-              className={`text-xs font-medium px-2 py-1 rounded-full ${getRatingColor(
-                race.rating
-              )} bg-accent`}
-            >
-              {race.rating}
-            </span>
-          </div>
-
-          {/* Candidates */}
-          <div className="space-y-3 mb-4">
-            {race.candidates.map((candidate, idx) => (
-              <div key={idx}>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`h-2 w-2 rounded-full ${getPartyColor(
-                        candidate.party
-                      )}`}
-                    />
-                    <span className="text-sm font-medium">{candidate.name}</span>
-                  </div>
-                  <span className="text-sm font-semibold">
-                    {candidate.percentage}%
-                  </span>
-                </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${getPartyColor(candidate.party)}`}
-                    style={{ width: `${candidate.percentage}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{race.pollCount} polls</span>
-            <span>{race.lastUpdate}</span>
-          </div>
-
-          {/* View details */}
-          <div className="mt-4 flex items-center text-primary text-sm font-medium group">
-            <span>View details</span>
-            <ArrowRight className="ml-1 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-          </div>
-        </Link>
+        />
       ))}
-    </div>
+    </Grid>
   )
 }
