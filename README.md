@@ -112,6 +112,15 @@ poll/
 
 ## 🚀 Getting Started
 
+### For Parallel Development (Multiple Claude Code Instances)
+
+**This project is optimized for parallel development!** See:
+- **[PARALLEL_DEV_GUIDE.md](./PARALLEL_DEV_GUIDE.md)** - Complete workflow guide
+- **[TASK_ASSIGNMENTS.md](./TASK_ASSIGNMENTS.md)** - Task breakdown by workstream
+- **[.claude/QUICKSTART.md](./.claude/QUICKSTART.md)** - Quick reference
+
+Each new Claude Code instance will auto-configure via the SessionStart hook.
+
 ### Prerequisites
 
 - Node.js 20 LTS or higher
