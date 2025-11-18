@@ -18,6 +18,7 @@ import { errorHandler } from './middleware/error-handler.js'
 import { raceRoutes } from './routes/races.js'
 import { pollRoutes } from './routes/polls.js'
 import { pollsterRoutes } from './routes/pollsters.js'
+import { exportRoutes } from './routes/export.js'
 
 const server = Fastify({
   logger: {
@@ -80,6 +81,7 @@ async function start() {
           { name: 'races', description: 'Election race endpoints' },
           { name: 'polls', description: 'Poll data endpoints' },
           { name: 'pollsters', description: 'Pollster information endpoints' },
+          { name: 'export', description: 'Data export endpoints (CSV/JSON)' },
           { name: 'forecasts', description: 'Forecast and prediction endpoints' },
           { name: 'health', description: 'Health check endpoints' },
         ],
@@ -131,6 +133,7 @@ async function start() {
     await server.register(raceRoutes, { prefix: '/api/races' })
     await server.register(pollRoutes, { prefix: '/api/polls' })
     await server.register(pollsterRoutes, { prefix: '/api/pollsters' })
+    await server.register(exportRoutes, { prefix: '/api/export' })
 
     // ============================================
     // Error Handler
