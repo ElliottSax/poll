@@ -7,7 +7,7 @@ Runs all scrapers and aggregates results
 import asyncio
 from loguru import logger
 from scrapers.rcp import RCPScraper
-# from scrapers.fivethirtyeight import FiveThirtyEightScraper
+from scrapers.fivethirtyeight import FiveThirtyEightScraper
 
 
 async def run_all_scrapers():
@@ -16,7 +16,7 @@ async def run_all_scrapers():
 
     scrapers = [
         RCPScraper(),
-        # FiveThirtyEightScraper(),  # Add when implemented
+        FiveThirtyEightScraper(),
     ]
 
     results = []
