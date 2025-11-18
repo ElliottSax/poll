@@ -60,10 +60,10 @@
 - [x] Toast/Notification system
 - [x] Modal/Dialog component
 
-**Week 2: Layout Components (IN PROGRESS)**
-- [ ] Navigation Header
-- [ ] Footer
-- [ ] Container/Grid layout
+**Week 2: Layout Components (COMPLETE ✅)**
+- [x] Navigation Header (with theme toggle, auth, mobile menu)
+- [x] Footer (with links, social media, disclaimer)
+- [x] Container/Grid layout (with Grid, Section, PageLayout, Main components)
 
 **Week 3-4: Poll-Specific & Data Visualization**
 - [ ] Race Card component
