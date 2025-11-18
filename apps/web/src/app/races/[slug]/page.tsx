@@ -22,9 +22,14 @@ interface PageProps {
 
 export default function RaceDetailPage({ params }: PageProps) {
   const [race, setRace] = useState<Race | null>(null)
-  const [polls, setPolls] = useState<Poll[]>([])
+  const [allPolls, setAllPolls] = useState<Poll[]>([])
+  const [filteredPolls, setFilteredPolls] = useState<Poll[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Filter states
+  const [methodologyFilter, setMethodologyFilter] = useState<string>('all')
+  const [populationFilter, setPopulationFilter] = useState<string>('all')
 
   useEffect(() => {
     async function loadRaceData() {
@@ -38,7 +43,8 @@ export default function RaceDetailPage({ params }: PageProps) {
         ])
 
         setRace(raceData)
-        setPolls(pollsData.polls)
+        setAllPolls(pollsData.polls)
+        setFilteredPolls(pollsData.polls)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load race')
       } finally {
@@ -48,6 +54,21 @@ export default function RaceDetailPage({ params }: PageProps) {
 
     loadRaceData()
   }, [params.slug])
+
+  // Filter polls when filters change
+  useEffect(() => {
+    let filtered = [...allPolls]
+
+    if (methodologyFilter !== 'all') {
+      filtered = filtered.filter(poll => poll.methodology === methodologyFilter)
+    }
+
+    if (populationFilter !== 'all') {
+      filtered = filtered.filter(poll => poll.populationType === populationFilter)
+    }
+
+    setFilteredPolls(filtered)
+  }, [methodologyFilter, populationFilter, allPolls])
 
   if (loading) {
     return (
@@ -76,6 +97,10 @@ export default function RaceDetailPage({ params }: PageProps) {
 
   // Extract candidates from race data
   const candidates = race.candidates?.candidates || []
+
+  // Get unique methodologies and population types from all polls
+  const uniqueMethodologies = Array.from(new Set(allPolls.map(p => p.methodology).filter(Boolean)))
+  const uniquePopulations = Array.from(new Set(allPolls.map(p => p.populationType).filter(Boolean)))
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -146,20 +171,76 @@ export default function RaceDetailPage({ params }: PageProps) {
             )}
 
             {/* Poll Trend Chart */}
-            {polls.length > 0 && (
+            {allPolls.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Poll Trend</h2>
-                <PollTrendChart polls={polls} candidates={candidates} />
+                <PollTrendChart polls={filteredPolls} candidates={candidates} />
               </div>
             )}
 
             {/* Recent Polls Table */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
-                Recent Polls ({polls.length})
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900">
+                  Recent Polls ({filteredPolls.length}{filteredPolls.length !== allPolls.length ? ` of ${allPolls.length}` : ''})
+                </h2>
+              </div>
 
-              {polls.length === 0 ? (
+              {/* Filters */}
+              {allPolls.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-4">
+                  {/* Methodology Filter */}
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="methodology" className="text-sm font-medium text-gray-700">
+                      Methodology:
+                    </label>
+                    <select
+                      id="methodology"
+                      value={methodologyFilter}
+                      onChange={(e) => setMethodologyFilter(e.target.value)}
+                      className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="all">All</option>
+                      {uniqueMethodologies.map(method => (
+                        <option key={method} value={method}>{method}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Population Type Filter */}
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="population" className="text-sm font-medium text-gray-700">
+                      Population:
+                    </label>
+                    <select
+                      id="population"
+                      value={populationFilter}
+                      onChange={(e) => setPopulationFilter(e.target.value)}
+                      className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="all">All</option>
+                      {uniquePopulations.map(pop => (
+                        <option key={pop} value={pop}>{pop}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Clear Filters */}
+                  {(methodologyFilter !== 'all' || populationFilter !== 'all') && (
+                    <button
+                      onClick={() => {
+                        setMethodologyFilter('all')
+                        setPopulationFilter('all')
+                      }}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {filteredPolls.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">No polls available</p>
               ) : (
                 <div className="overflow-x-auto">
@@ -181,7 +262,7 @@ export default function RaceDetailPage({ params }: PageProps) {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {polls.map((poll) => (
+                      {filteredPolls.map((poll) => (
                         <tr key={poll.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">
@@ -244,7 +325,7 @@ export default function RaceDetailPage({ params }: PageProps) {
                 )}
                 <div>
                   <dt className="text-sm text-gray-500">Total Polls</dt>
-                  <dd className="text-sm font-medium text-gray-900">{polls.length}</dd>
+                  <dd className="text-sm font-medium text-gray-900">{allPolls.length}</dd>
                 </div>
               </dl>
             </div>
