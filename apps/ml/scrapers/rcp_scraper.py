@@ -26,32 +26,108 @@ class RCPScraper(BaseScraper):
 
     async def scrape_polls(self, race_id: Optional[str] = None) -> List[Dict]:
         """
-        Scrape polls from RealClearPolitics
+        Scrape polls from RealClearPolitics with BeautifulSoup
 
-        TODO: Implement actual scraping logic
-        - Use requests or httpx for HTTP calls
-        - Use BeautifulSoup for HTML parsing
-        - Handle pagination if needed
-        - Extract poll data from tables
+        Args:
+            race_id: Optional race identifier
+
+        Returns:
+            List of standardized poll dictionaries
         """
         self.logger.info(f"Scraping RCP for race: {race_id or 'all'}")
 
-        # Placeholder - replace with actual implementation
+        try:
+            import httpx
+            from bs4 import BeautifulSoup
+        except ImportError:
+            self.logger.error("Required packages not installed: httpx, beautifulsoup4, lxml")
+            return []
+
         polls = []
 
-        # Example structure of what a poll should look like:
-        # {
-        #     "pollster": "Emerson College",
-        #     "date": "2024-11-15",
-        #     "sample_size": 1000,
-        #     "margin_of_error": 3.0,
-        #     "methodology": "Online",
-        #     "race_id": "2024-president",
-        #     "results": [
-        #         {"candidate": "Candidate A", "percentage": 48.0},
-        #         {"candidate": "Candidate B", "percentage": 45.0}
-        #     ]
-        # }
+        # RCP URL for 2024 presidential race
+        url = "https://www.realclearpolls.com/polls/president/general/2024/trump-vs-harris"
+
+        try:
+            async with httpx.AsyncClient() as client:
+                self.logger.info(f"Fetching {url}")
+                response = await client.get(url, timeout=30.0, follow_redirects=True)
+                response.raise_for_status()
+
+            soup = BeautifulSoup(response.text, 'lxml')
+
+            # Find the polls table (RCP uses class="data")
+            table = soup.find('table', {'class': 'data'})
+
+            if not table:
+                self.logger.warning("No polls table found on page")
+                return polls
+
+            # Parse table rows (skip header)
+            rows = table.find_all('tr')[1:]
+
+            for row in rows:
+                cells = row.find_all('td')
+                if len(cells) < 5:
+                    continue
+
+                try:
+                    # Extract data from cells
+                    pollster = cells[0].get_text(strip=True)
+                    date_str = cells[1].get_text(strip=True)
+                    sample_str = cells[2].get_text(strip=True)
+
+                    # Parse sample size and population
+                    sample_size = None
+                    population = "LV"
+                    if sample_str and sample_str != '--':
+                        parts = sample_str.split()
+                        if parts and parts[0].isdigit():
+                            sample_size = int(parts[0])
+                        if len(parts) > 1:
+                            population = parts[1]
+
+                    # Extract candidate results (typically in cells 3 and 4)
+                    results = []
+                    candidates = ['Trump', 'Harris']
+
+                    for i, candidate in enumerate(candidates):
+                        if len(cells) > (3 + i):
+                            pct_text = cells[3 + i].get_text(strip=True)
+                            if pct_text and pct_text != '--':
+                                percentage = float(pct_text.replace('%', ''))
+                                results.append({
+                                    "candidate": candidate,
+                                    "percentage": percentage
+                                })
+
+                    # Parse date
+                    poll_date = self.parse_date(date_str)
+                    if not poll_date or not results:
+                        continue
+
+                    poll = {
+                        "pollster": self.normalize_pollster_name(pollster),
+                        "date": poll_date.isoformat(),
+                        "sample_size": sample_size,
+                        "population": population,
+                        "methodology": "mixed",
+                        "race_id": race_id or "2024-president",
+                        "results": results,
+                        "url": url,
+                        "source": "RealClearPolitics"
+                    }
+
+                    polls.append(poll)
+
+                except (ValueError, IndexError, AttributeError) as e:
+                    self.logger.warning(f"Error parsing row: {e}")
+                    continue
+
+            self.logger.info(f"Successfully scraped {len(polls)} polls from RCP")
+
+        except Exception as e:
+            self.logger.error(f"Error scraping RCP: {e}")
 
         return polls
 
@@ -59,13 +135,13 @@ class RCPScraper(BaseScraper):
         """
         Validate RCP poll data
 
-        TODO: Add validation rules
-        - Check required fields exist
-        - Validate date format
-        - Ensure percentages sum to reasonable total
-        - Check sample size is positive
-        - Validate margin of error is reasonable
+        Args:
+            poll_data: Poll dictionary to validate
+
+        Returns:
+            True if valid, False otherwise
         """
+        # Check required fields
         required_fields = ["pollster", "date", "race_id", "results"]
 
         for field in required_fields:
@@ -73,7 +149,21 @@ class RCPScraper(BaseScraper):
                 self.logger.warning(f"Missing required field: {field}")
                 return False
 
-        # Add more validation rules
+        # Validate results structure
+        if not isinstance(poll_data["results"], list) or len(poll_data["results"]) == 0:
+            self.logger.warning("Invalid or empty results")
+            return False
+
+        # Validate percentages sum to reasonable total (80-105%)
+        total_pct = sum(r.get("percentage", 0) for r in poll_data["results"])
+        if not (80 <= total_pct <= 105):
+            self.logger.warning(f"Percentages sum to {total_pct}%, expected 80-105%")
+            return False
+
+        # Validate sample size if present
+        if poll_data.get("sample_size") and poll_data["sample_size"] < 100:
+            self.logger.warning(f"Sample size too small: {poll_data['sample_size']}")
+            return False
 
         return True
 

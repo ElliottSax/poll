@@ -1,0 +1,233 @@
+// Prisma schema for Poll Dashboard
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// Core Models
+// ============================================================================
+
+model Race {
+  id               String   @id @default(uuid())
+  slug             String   @unique
+  title            String
+  state            String
+  district         String?
+  office           String   // president, senate, house, governor, mayor
+  year             Int
+  electionDate     DateTime
+  description      String?
+  featured         Boolean  @default(false)
+  status           String   @default("active") // upcoming, active, completed
+  importanceScore  Int      @default(50)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  polls            Poll[]
+  forecasts        Forecast[]
+  candidates       CandidateRace[]
+
+  @@index([slug])
+  @@index([state, office, year])
+  @@index([importanceScore])
+  @@map("races")
+}
+
+model Pollster {
+  id                  String   @id @default(uuid())
+  slug                String   @unique
+  name                String
+  grade               String?  // A+, A, A-, B+, etc.
+  accuracyScore       Float?
+  methodologyScore    Float?
+  transparency        Float?
+  houseEffect         Float?
+  partisanLean        String?  // D, R, or null
+  website             String?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  polls               Poll[]
+
+  @@index([slug])
+  @@index([name])
+  @@map("pollsters")
+}
+
+model Poll {
+  id              String   @id @default(uuid())
+  raceId          String
+  pollsterId      String
+  pollDate        DateTime
+  sampleSize      Int?
+  marginOfError   Float?
+  population      String   @default("LV") // LV, RV, A
+  methodology     String   @default("mixed") // phone, online, ivr, mixed
+  partisan        String?  // D, R, or null
+  results         Json     // {"Candidate A": 48.5, "Candidate B": 45.2}
+  url             String?
+  notes           String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  race            Race     @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  pollster        Pollster @relation(fields: [pollsterId], references: [id])
+
+  @@index([raceId])
+  @@index([pollsterId])
+  @@index([pollDate])
+  @@map("polls")
+}
+
+model Candidate {
+  id              String   @id @default(uuid())
+  name            String
+  party           String   // Democratic, Republican, Independent, etc.
+  incumbent       Boolean  @default(false)
+  photoUrl        String?
+  bio             String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  races           CandidateRace[]
+  forecastResults ForecastResult[]
+
+  @@index([name])
+  @@map("candidates")
+}
+
+// Join table for many-to-many relationship between Candidates and Races
+model CandidateRace {
+  id          String   @id @default(uuid())
+  candidateId String
+  raceId      String
+
+  createdAt   DateTime @default(now())
+
+  // Relations
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  race        Race      @relation(fields: [raceId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateId, raceId])
+  @@index([raceId])
+  @@map("candidate_races")
+}
+
+// ============================================================================
+// Forecasting Models
+// ============================================================================
+
+model Forecast {
+  id           String   @id @default(uuid())
+  raceId       String
+  forecastDate DateTime
+  modelVersion String   @default("1.0")
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  race         Race             @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  results      ForecastResult[]
+
+  @@index([raceId])
+  @@index([forecastDate])
+  @@map("forecasts")
+}
+
+model ForecastResult {
+  id                  String   @id @default(uuid())
+  forecastId          String
+  candidateId         String
+  projectedPercentage Float
+  winProbability      Float
+  lowerBound          Float
+  upperBound          Float
+
+  createdAt           DateTime @default(now())
+
+  // Relations
+  forecast            Forecast  @relation(fields: [forecastId], references: [id], onDelete: Cascade)
+  candidate           Candidate @relation(fields: [candidateId], references: [id])
+
+  @@index([forecastId])
+  @@map("forecast_results")
+}
+
+// ============================================================================
+// User & Engagement Models (Phase 2)
+// ============================================================================
+
+model User {
+  id                      String   @id @default(uuid())
+  email                   String   @unique
+  emailVerified           Boolean  @default(false)
+  name                    String?
+  avatar                  String?
+  role                    String   @default("user") // user, admin
+  isPremium               Boolean  @default(false)
+
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  // Relations
+  scenarios               Scenario[]
+  predictions             Prediction[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Scenario {
+  id                  String   @id @default(uuid())
+  userId              String?
+  title               String
+  description         String?
+  adjustments         Json     // Race adjustments
+  isPublic            Boolean  @default(false)
+  views               Int      @default(0)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  user                User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([isPublic])
+  @@map("scenarios")
+}
+
+model Prediction {
+  id              String    @id @default(uuid())
+  userId          String
+  raceId          String
+  predictedWinner String
+  predictedMargin Float?
+  confidence      Float?
+  isCorrect       Boolean?
+
+  createdAt       DateTime  @default(now())
+  resolvedAt      DateTime?
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([raceId])
+  @@map("predictions")
+}

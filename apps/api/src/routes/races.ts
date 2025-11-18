@@ -138,4 +138,65 @@ export async function racesRoutes(
       }
     },
   })
+
+  // Get polls for a specific race
+  fastify.get('/:slug/polls', {
+    schema: {
+      description: 'Get all polls for a specific race',
+      tags: ['races'],
+      params: {
+        type: 'object',
+        properties: {
+          slug: { type: 'string' },
+        },
+        required: ['slug'],
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const { slug } = request.params as { slug: string }
+
+        const cacheKey = `race:${slug}:polls`
+        const cached = await cache.get(cacheKey)
+        if (cached) {
+          return reply.send(cached)
+        }
+
+        // First get the race to verify it exists
+        const race = await prisma.race.findUnique({
+          where: { slug },
+          select: { id: true },
+        })
+
+        if (!race) {
+          return reply.code(404).send({ error: 'Race not found' })
+        }
+
+        // Get polls for this race
+        const polls = await prisma.poll.findMany({
+          where: { raceId: race.id },
+          orderBy: { pollDate: 'desc' },
+          take: 50,
+          include: {
+            pollster: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        })
+
+        const response = { polls }
+
+        await cache.set(cacheKey, response, 300)
+
+        return reply.send(response)
+      } catch (error) {
+        fastify.log.error(error)
+        return reply.code(500).send({ error: 'Internal server error' })
+      }
+    },
+  })
 }
