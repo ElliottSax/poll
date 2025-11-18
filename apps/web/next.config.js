@@ -2,39 +2,47 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-
-  // Enable experimental features
+  transpilePackages: ['@poll/ui', '@poll/types', '@poll/database'],
+  
   experimental: {
     serverActions: true,
   },
 
-  // Image optimization
   images: {
-    domains: [
-      'localhost',
-      'pollingdashboard.com',
-      'api.mapbox.com',
-      'lh3.googleusercontent.com', // Google OAuth avatars
-      'avatars.githubusercontent.com', // GitHub avatars
-    ],
     formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
 
-  // Environment variables exposed to browser
-  env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
-    NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL,
-    NEXT_PUBLIC_MAPBOX_TOKEN: process.env.NEXT_PUBLIC_MAPBOX_TOKEN,
-  },
-
-  // Rewrites for API proxy (optional, for same-origin requests)
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL}/:path*`,
-      },
-    ]
+  // Performance optimizations
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Code splitting for heavy libraries
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            recharts: {
+              test: /[\\/]node_modules[\\/](recharts|d3-.*)[\\/]/,
+              name: 'recharts',
+              priority: 10,
+            },
+            mapbox: {
+              test: /[\\/]node_modules[\\/](mapbox-gl|react-map-gl)[\\/]/,
+              name: 'mapbox',
+              priority: 10,
+            },
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendor',
+              priority: 5,
+            },
+          },
+        },
+      };
+    }
+    return config;
   },
 
   // Headers for security
@@ -57,7 +65,7 @@ const nextConfig = {
           },
           {
             key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
+            value: 'DENY',
           },
           {
             key: 'X-XSS-Protection',
@@ -65,23 +73,12 @@ const nextConfig = {
           },
           {
             key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
+            value: 'strict-origin-when-cross-origin',
           },
         ],
       },
-    ]
+    ];
   },
+};
 
-  // Webpack configuration
-  webpack: (config, { isServer }) => {
-    // Handle SVG imports
-    config.module.rules.push({
-      test: /\.svg$/,
-      use: ['@svgr/webpack'],
-    })
-
-    return config
-  },
-}
-
-module.exports = nextConfig
+module.exports = nextConfig;
