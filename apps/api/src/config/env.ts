@@ -14,6 +14,7 @@ const envSchema = z.object({
   REDIS_URL: z.string(),
 
   API_SECRET: z.string().min(32),
+  JWT_SECRET: z.string().min(32).optional(),
   ALLOWED_ORIGINS: z.string().transform((val) => val.split(',')),
 
   RATE_LIMIT_MAX: z.string().default('100').transform(Number),
@@ -38,6 +39,7 @@ export const config = {
   databaseUrl: parsed.data.DATABASE_URL,
   redisUrl: parsed.data.REDIS_URL,
   apiSecret: parsed.data.API_SECRET,
+  jwtSecret: parsed.data.JWT_SECRET || parsed.data.API_SECRET, // Fallback to API_SECRET
   allowedOrigins: parsed.data.ALLOWED_ORIGINS,
   rateLimitMax: parsed.data.RATE_LIMIT_MAX,
   rateLimitWindow: parsed.data.RATE_LIMIT_WINDOW,
