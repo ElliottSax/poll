@@ -265,6 +265,19 @@ With 3-4 instances working in parallel:
 - `.claude/WORK_ASSIGNMENTS.md` - Track assignments
 - `.claude/KNOWN_ISSUES.md` - Known issues to fix
 - `.claude/templates/README.md` - Template usage
+- `.claude/BEST_PRACTICES.md` - ⭐ NEW! Coding standards
+- `.claude/TROUBLESHOOTING.md` - ⭐ NEW! Common issues & solutions
+
+### Track Starter Guides (⭐ NEW!)
+All 8 tracks have detailed implementation guides:
+- `.claude/guides/README.md` - Guide navigation & overview
+- `.claude/guides/TRACK_02_API_DEVELOPMENT.md` - API development
+- `.claude/guides/TRACK_03_FRONTEND_COMPONENTS.md` - React components
+- `.claude/guides/TRACK_04_DATA_SCRAPERS.md` - Data scrapers
+- `.claude/guides/TRACK_05_FRONTEND_PAGES.md` - Next.js pages
+- `.claude/guides/TRACK_06_DATABASE.md` - Prisma & database
+- `.claude/guides/TRACK_07_TESTING.md` - Testing setup
+- `.claude/guides/TRACK_08_DEVOPS.md` - Docker & CI/CD
 
 ### Project Docs
 - `README.md` - Project overview
