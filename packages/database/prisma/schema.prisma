@@ -34,6 +34,7 @@ model Race {
   polls            Poll[]
   forecasts        Forecast[]
   candidates       CandidateRace[]
+  savedBy          SavedRace[]
 
   @@index([slug])
   @@index([state, office, year])
@@ -176,10 +177,14 @@ model User {
   id                      String   @id @default(uuid())
   email                   String   @unique
   emailVerified           Boolean  @default(false)
+  passwordHash            String?
   name                    String?
+  bio                     String?
   avatar                  String?
-  role                    String   @default("user") // user, admin
+  role                    String   @default("user") // user, admin, developer
+  tier                    String   @default("free") // free, premium, developer, professional, enterprise
   isPremium               Boolean  @default(false)
+  lastLoginAt             DateTime?
 
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
@@ -187,9 +192,29 @@ model User {
   // Relations
   scenarios               Scenario[]
   predictions             Prediction[]
+  savedRaces              SavedRace[]
 
   @@index([email])
+  @@index([tier])
   @@map("users")
+}
+
+model SavedRace {
+  id                      String   @id @default(uuid())
+  userId                  String
+  raceId                  String
+  notes                   String?
+
+  createdAt               DateTime @default(now())
+
+  // Relations
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  race                    Race     @relation(fields: [raceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, raceId])
+  @@index([userId])
+  @@index([raceId])
+  @@map("saved_races")
 }
 
 model Scenario {

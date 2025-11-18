@@ -16,6 +16,7 @@ import { pollsRoutes } from './routes/polls'
 import { pollstersRoutes } from './routes/pollsters'
 import { candidatesRoutes } from './routes/candidates'
 import { forecastsRoutes } from './routes/forecasts'
+import { authRoutes } from './routes/auth'
 import { healthRoutes } from './routes/health'
 
 // Create Fastify instance
@@ -89,6 +90,7 @@ async function registerPlugins() {
       ],
       tags: [
         { name: 'health', description: 'Health check endpoints' },
+        { name: 'auth', description: 'Authentication endpoints' },
         { name: 'races', description: 'Race endpoints' },
         { name: 'polls', description: 'Poll endpoints' },
         { name: 'pollsters', description: 'Pollster endpoints' },
@@ -110,6 +112,7 @@ async function registerPlugins() {
 // Register routes
 async function registerRoutes() {
   await fastify.register(healthRoutes, { prefix: '/health' })
+  await fastify.register(authRoutes, { prefix: '/api/auth' })
   await fastify.register(racesRoutes, { prefix: '/api/races' })
   await fastify.register(pollsRoutes, { prefix: '/api/polls' })
   await fastify.register(pollstersRoutes, { prefix: '/api/pollsters' })

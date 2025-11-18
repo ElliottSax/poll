@@ -1,0 +1,92 @@
+global:
+  scrape_interval: 15s # How often to scrape targets
+  evaluation_interval: 15s # How often to evaluate rules
+  scrape_timeout: 10s
+
+  external_labels:
+    cluster: 'poll-dashboard'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - '/etc/prometheus/alerts/*.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter (system metrics)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          instance: 'poll-server'
+
+  # API Service
+  - job_name: 'api'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['api:3001']
+        labels:
+          service: 'api'
+          tier: 'backend'
+
+  # Frontend Service
+  - job_name: 'web'
+    metrics_path: '/api/metrics'
+    static_configs:
+      - targets: ['web:3000']
+        labels:
+          service: 'web'
+          tier: 'frontend'
+
+  # ML Service
+  - job_name: 'ml'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['ml:8000']
+        labels:
+          service: 'ml'
+          tier: 'ml'
+
+  # PostgreSQL
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres'
+          tier: 'database'
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+          tier: 'cache'
+
+  # Nginx
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+        labels:
+          service: 'nginx'
+          tier: 'proxy'
+
+  # Cadvisor (Docker container metrics)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
+          tier: 'infrastructure'
