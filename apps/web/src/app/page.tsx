@@ -6,11 +6,14 @@
 
 import { useEffect, useState } from 'react'
 import { api, Race } from '@/lib/api'
+import RaceComparisonCard from '@/components/RaceComparisonCard'
 
 export default function HomePage() {
   const [races, setRaces] = useState<Race[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showComparison, setShowComparison] = useState(false)
+  const [comparedRaces, setComparedRaces] = useState<string[]>([])
 
   useEffect(() => {
     async function loadRaces() {
@@ -78,7 +81,42 @@ export default function HomePage() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Featured Races</h2>
+        {/* Race Comparison Section */}
+        {showComparison && comparedRaces.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900">Race Comparison</h2>
+              <button
+                onClick={() => setShowComparison(false)}
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Hide comparison
+              </button>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {comparedRaces.map((slug) => (
+                <RaceComparisonCard
+                  key={slug}
+                  raceSlug={slug}
+                  onRemove={() => setComparedRaces(prev => prev.filter(s => s !== slug))}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Featured Races Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Featured Races</h2>
+          {!showComparison && comparedRaces.length > 0 && (
+            <button
+              onClick={() => setShowComparison(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+            >
+              Compare Races ({comparedRaces.length})
+            </button>
+          )}
+        </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {races.map((race) => (
@@ -118,16 +156,36 @@ export default function HomePage() {
                 </p>
               )}
 
-              <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                <span className="text-sm text-gray-500">
-                  {race._count?.polls || 0} polls
-                </span>
-                <a
-                  href={`/races/${race.slug}`}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-700"
-                >
-                  View Details →
-                </a>
+              <div className="pt-3 border-t border-gray-100 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">
+                    {race._count?.polls || 0} polls
+                  </span>
+                  <a
+                    href={`/races/${race.slug}`}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                  >
+                    View Details →
+                  </a>
+                </div>
+                {comparedRaces.includes(race.slug) ? (
+                  <button
+                    onClick={() => setComparedRaces(prev => prev.filter(s => s !== race.slug))}
+                    className="w-full px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200"
+                  >
+                    Remove from comparison
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setComparedRaces(prev => [...prev, race.slug])
+                      setShowComparison(true)
+                    }}
+                    className="w-full px-3 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded hover:bg-blue-50"
+                  >
+                    Add to comparison
+                  </button>
+                )}
               </div>
             </div>
           ))}
