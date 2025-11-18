@@ -17,6 +17,9 @@ import { pollstersRoutes } from './routes/pollsters'
 import { forecastsRoutes } from './routes/forecasts'
 import { healthRoutes } from './routes/health'
 
+// Import services
+import { initializeWebSocketService } from './services/websocket'
+
 // Create Fastify instance
 const fastify = Fastify({
   logger: logger,
@@ -26,11 +29,19 @@ const fastify = Fastify({
   trustProxy: true,
 })
 
+// Global WebSocket service reference
+let wsService: any = null
+
 // Graceful shutdown
 const closeGracefully = async (signal: string) => {
   fastify.log.info(`Received ${signal}, closing gracefully...`)
 
-  // Close connections
+  // Close WebSocket connections
+  if (wsService) {
+    await wsService.shutdown()
+  }
+
+  // Close other connections
   await prisma.$disconnect()
   await redis.quit()
   await fastify.close()
@@ -129,6 +140,11 @@ async function start() {
     await registerPlugins()
     await registerRoutes()
 
+    // Initialize WebSocket service
+    wsService = initializeWebSocketService(fastify)
+    await wsService.initialize()
+    fastify.log.info('WebSocket service initialized')
+
     // Start listening
     await fastify.listen({
       port: config.port,
@@ -137,6 +153,7 @@ async function start() {
 
     fastify.log.info(`Server running at http://${config.host}:${config.port}`)
     fastify.log.info(`API documentation at http://${config.host}:${config.port}/docs`)
+    fastify.log.info(`WebSocket available at ws://${config.host}:${config.port}/ws`)
   } catch (err) {
     fastify.log.error(err)
     process.exit(1)
