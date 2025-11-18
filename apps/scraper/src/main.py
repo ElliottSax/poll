@@ -8,11 +8,16 @@ import asyncio
 from loguru import logger
 from scrapers.rcp import RCPScraper
 from scrapers.fivethirtyeight import FiveThirtyEightScraper
+from database import DatabaseManager
 
 
 async def run_all_scrapers():
-    """Run all scrapers in sequence"""
+    """Run all scrapers in sequence and save to database"""
     logger.info("Starting all scrapers")
+
+    # Initialize database
+    db = DatabaseManager()
+    await db.connect()
 
     scrapers = [
         RCPScraper(),
@@ -20,11 +25,17 @@ async def run_all_scrapers():
     ]
 
     results = []
+    all_polls = []
 
     for scraper in scrapers:
         try:
             result = await scraper.run()
             results.append(result)
+
+            # Collect polls for database saving
+            if result.get('success') and result.get('polls'):
+                all_polls.extend(result.get('polls', []))
+
         except Exception as e:
             logger.error(f"Scraper {scraper.source_name} failed: {e}")
             results.append({
@@ -34,6 +45,17 @@ async def run_all_scrapers():
             })
         finally:
             scraper.close()
+
+    # Save all polls to database
+    if all_polls:
+        logger.info(f"Saving {len(all_polls)} polls to database")
+        db_result = await db.save_polls_batch(all_polls)
+        logger.info(f"Database save results: {db_result}")
+    else:
+        logger.warning("No polls to save to database")
+
+    # Disconnect from database
+    await db.disconnect()
 
     # Summary
     successful = sum(1 for r in results if r.get('success'))
