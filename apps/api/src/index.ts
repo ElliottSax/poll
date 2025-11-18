@@ -14,6 +14,7 @@ import { redis } from './utils/redis'
 import { racesRoutes } from './routes/races'
 import { pollsRoutes } from './routes/polls'
 import { pollstersRoutes } from './routes/pollsters'
+import { candidatesRoutes } from './routes/candidates'
 import { forecastsRoutes } from './routes/forecasts'
 import { healthRoutes } from './routes/health'
 
@@ -91,6 +92,7 @@ async function registerPlugins() {
         { name: 'races', description: 'Race endpoints' },
         { name: 'polls', description: 'Poll endpoints' },
         { name: 'pollsters', description: 'Pollster endpoints' },
+        { name: 'candidates', description: 'Candidate endpoints' },
         { name: 'forecasts', description: 'Forecast endpoints' },
       ],
     },
@@ -111,6 +113,7 @@ async function registerRoutes() {
   await fastify.register(racesRoutes, { prefix: '/api/races' })
   await fastify.register(pollsRoutes, { prefix: '/api/polls' })
   await fastify.register(pollstersRoutes, { prefix: '/api/pollsters' })
+  await fastify.register(candidatesRoutes, { prefix: '/api/candidates' })
   await fastify.register(forecastsRoutes, { prefix: '/api/forecasts' })
 }
 

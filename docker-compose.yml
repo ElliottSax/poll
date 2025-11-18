@@ -115,6 +115,7 @@ services:
     environment:
       DATABASE_URL: postgresql://poll_user:poll_password@postgres:5432/poll_db
       REDIS_URL: redis://redis:6379
+      API_BASE_URL: http://api:3001
       PYTHONUNBUFFERED: 1
     volumes:
       - ./apps/ml:/app
@@ -127,6 +128,32 @@ services:
     networks:
       - poll-network
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ML Scheduler Service
+  scheduler:
+    build:
+      context: ./apps/ml
+      dockerfile: Dockerfile
+    container_name: poll-scheduler
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://poll_user:poll_password@postgres:5432/poll_db
+      REDIS_URL: redis://redis:6379
+      API_BASE_URL: http://api:3001
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - ./apps/ml:/app
+      - ml_cache:/root/.cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_started
+    networks:
+      - poll-network
+    command: python scheduler.py
 
   # Adminer (Database GUI)
   adminer:

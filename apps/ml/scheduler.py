@@ -11,6 +11,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from datetime import datetime
 
 from scrapers import RCPScraper, FiveThirtyEightScraper
+from aggregator import PollAggregator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,13 +19,14 @@ logger = logging.getLogger(__name__)
 
 class ScraperScheduler:
     """
-    Manages automated scraping schedule
+    Manages automated scraping and aggregation schedule
     """
 
     def __init__(self):
         self.scheduler = AsyncIOScheduler()
         self.rcp_scraper = RCPScraper()
         self.fte_scraper = FiveThirtyEightScraper()
+        self.aggregator = PollAggregator()
 
     async def run_rcp_scraper(self):
         """Run RCP scraper"""
@@ -51,6 +53,23 @@ class ScraperScheduler:
         await asyncio.sleep(5)  # Brief delay between scrapers
         await self.run_fte_scraper()
         logger.info("=== All scrapers completed ===")
+
+    async def run_aggregation(self):
+        """Run poll aggregation for all races"""
+        logger.info("=== Starting poll aggregation ===")
+        try:
+            results = await self.aggregator.aggregate_all_races()
+            logger.info(f"Aggregation completed: {len(results)} races processed")
+        except Exception as e:
+            logger.error(f"Aggregation failed: {e}")
+
+    async def run_scrape_and_aggregate(self):
+        """Run all scrapers followed by aggregation"""
+        logger.info("=== Running scrape + aggregate pipeline ===")
+        await self.run_all_scrapers()
+        await asyncio.sleep(10)  # Wait for data to settle
+        await self.run_aggregation()
+        logger.info("=== Pipeline completed ===")
 
     def start(self):
         """
@@ -82,6 +101,24 @@ class ScraperScheduler:
             trigger=CronTrigger(hour=0, minute=0),
             id='all_scrapers',
             name='All Scrapers (daily midnight)',
+            replace_existing=True
+        )
+
+        # Schedule aggregation - every 2 hours
+        self.scheduler.add_job(
+            self.run_aggregation,
+            trigger=IntervalTrigger(hours=2),
+            id='aggregation',
+            name='Poll Aggregation (every 2 hours)',
+            replace_existing=True
+        )
+
+        # Schedule full pipeline - daily at 4 AM (after 3 AM scrape)
+        self.scheduler.add_job(
+            self.run_scrape_and_aggregate,
+            trigger=CronTrigger(hour=4, minute=0),
+            id='scrape_aggregate_pipeline',
+            name='Scrape + Aggregate Pipeline (daily 4 AM)',
             replace_existing=True
         )
 
