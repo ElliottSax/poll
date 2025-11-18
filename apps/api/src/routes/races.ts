@@ -28,6 +28,11 @@ const getRacePollsSchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 })
 
+const getRaceAverageSchema = z.object({
+  slug: z.string().min(1),
+  days: z.coerce.number().int().min(1).max(90).default(14),
+})
+
 export async function raceRoutes(server: FastifyInstance) {
   // ============================================
   // GET /api/races - List all races
@@ -259,6 +264,151 @@ export async function raceRoutes(server: FastifyInstance) {
       total,
       limit: query.limit,
       offset: query.offset,
+    }
+  })
+
+  // ============================================
+  // GET /api/races/:slug/average - Get polling average
+  // ============================================
+  server.get('/:slug/average', {
+    schema: {
+      tags: ['races'],
+      description: 'Calculate weighted polling average for a race',
+      params: {
+        type: 'object',
+        required: ['slug'],
+        properties: {
+          slug: { type: 'string' },
+        },
+      },
+      querystring: {
+        type: 'object',
+        properties: {
+          days: { type: 'integer', minimum: 1, maximum: 90, default: 14 },
+        },
+      },
+      response: {
+        200: {
+          type: 'object',
+          properties: {
+            raceSlug: { type: 'string' },
+            raceName: { type: 'string' },
+            timeframe: { type: 'integer' },
+            pollsIncluded: { type: 'integer' },
+            averages: { type: 'object' },
+            lastUpdated: { type: 'string' },
+          },
+        },
+        404: {
+          type: 'object',
+          properties: {
+            error: { type: 'string' },
+            message: { type: 'string' },
+          },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    const params = getRaceSchema.parse(request.params)
+    const query = getRaceAverageSchema.parse(request.query)
+
+    // Check if race exists
+    const race = await prisma.race.findUnique({
+      where: { slug: params.slug },
+      select: {
+        id: true,
+        raceName: true,
+        slug: true,
+        candidates: true,
+      },
+    })
+
+    if (!race) {
+      return reply.status(404).send({
+        error: 'Not Found',
+        message: `Race with slug '${params.slug}' not found`,
+      })
+    }
+
+    // Get recent polls within timeframe
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - query.days)
+
+    const polls = await prisma.poll.findMany({
+      where: {
+        raceId: race.id,
+        pollDate: {
+          gte: cutoffDate,
+        },
+      },
+      include: {
+        pollster: {
+          select: {
+            methodologyGrade: true,
+          },
+        },
+      },
+      orderBy: { pollDate: 'desc' },
+    })
+
+    if (polls.length === 0) {
+      return {
+        raceSlug: race.slug,
+        raceName: race.raceName,
+        timeframe: query.days,
+        pollsIncluded: 0,
+        averages: {},
+        lastUpdated: new Date().toISOString(),
+      }
+    }
+
+    // Calculate weighted averages
+    const gradeWeights: Record<string, number> = {
+      'A_PLUS': 1.0,
+      'A': 0.95,
+      'A_MINUS': 0.9,
+      'B_PLUS': 0.85,
+      'B': 0.8,
+      'B_MINUS': 0.75,
+      'C_PLUS': 0.7,
+      'C': 0.65,
+      'C_MINUS': 0.6,
+      'D': 0.5,
+      'F': 0.3,
+    }
+
+    const candidateData: Record<string, { weightedSum: number; totalWeight: number }> = {}
+
+    polls.forEach((poll) => {
+      const daysSincePoll = Math.floor((Date.now() - new Date(poll.pollDate).getTime()) / (1000 * 60 * 60 * 24))
+      const recencyWeight = Math.max(0.5, 1 - (daysSincePoll / query.days) * 0.5)
+
+      const gradeWeight = gradeWeights[poll.pollster.methodologyGrade] || 0.5
+      const sampleWeight = Math.min(1, (poll.sampleSize || 500) / 1000)
+
+      const totalWeight = recencyWeight * gradeWeight * sampleWeight
+
+      Object.entries(poll.results as Record<string, number>).forEach(([candidate, percentage]) => {
+        if (!candidateData[candidate]) {
+          candidateData[candidate] = { weightedSum: 0, totalWeight: 0 }
+        }
+        candidateData[candidate].weightedSum += percentage * totalWeight
+        candidateData[candidate].totalWeight += totalWeight
+      })
+    })
+
+    const averages: Record<string, number> = {}
+    Object.entries(candidateData).forEach(([candidate, data]) => {
+      averages[candidate] = Math.round((data.weightedSum / data.totalWeight) * 10) / 10
+    })
+
+    return {
+      raceSlug: race.slug,
+      raceName: race.raceName,
+      timeframe: query.days,
+      pollsIncluded: polls.length,
+      averages,
+      lastUpdated: new Date().toISOString(),
     }
   })
 }
