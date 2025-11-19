@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../ui/Card'
 import { Badge } from '../ui/Badge'
 import { ArrowUp, ArrowDown, Minus, TrendingUp } from 'lucide-react'
@@ -149,9 +150,9 @@ export function RaceCard({
 
   if (href) {
     return (
-      <a href={href} className="block">
+      <Link href={href} className="block">
         {cardContent}
-      </a>
+      </Link>
     )
   }
 

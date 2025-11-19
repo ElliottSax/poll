@@ -3,7 +3,6 @@
 import { useState, useMemo } from 'react'
 import { Badge } from '../ui/Badge'
 import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react'
-import { Button } from '../ui/Button'
 
 export interface PollResult {
   candidateId: string
