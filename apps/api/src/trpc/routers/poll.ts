@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, publicProcedure } from '../trpc.js';
+import { router, publicProcedure } from '../trpc';
 
 export const pollRouter = router({
   // List polls

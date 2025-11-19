@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { router, publicProcedure, protectedProcedure } from '../trpc.js';
+import { TRPCError } from '@trpc/server';
+import { router, publicProcedure } from '../trpc';
 
 export const raceRouter = router({
   // List races with filters
@@ -59,22 +60,46 @@ export const raceRouter = router({
       });
 
       if (!race) {
-        throw new Error('Race not found');
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Race not found',
+        });
       }
 
       return race;
     }),
 
-  // Get trending races
+  // Get trending races (with mock data for now)
   trending: publicProcedure
     .input(
       z.object({
         limit: z.number().min(1).max(20).default(10),
       })
     )
-    .query(async ({ input, ctx }) => {
+    .query(async ({ input }) => {
       // TODO: Implement actual trending logic
-      // For now, return placeholder data
-      return [];
+      // For MVP, return mock data
+      return [
+        {
+          race_id: 'mock-1',
+          race_name: 'Pennsylvania Senate 2024',
+          movement_7d: 3.2,
+          movement_direction: 'D_GAINING' as const,
+          current_margin: 1.1,
+          previous_margin: -2.1,
+          category_change: 'Toss-up → Lean D',
+          polls_last_7d: 4,
+        },
+        {
+          race_id: 'mock-2',
+          race_name: 'Arizona Senate 2024',
+          movement_7d: 2.8,
+          movement_direction: 'R_GAINING' as const,
+          current_margin: -1.5,
+          previous_margin: -4.3,
+          category_change: 'Lean R → Toss-up',
+          polls_last_7d: 3,
+        },
+      ].slice(0, input.limit);
     }),
 });

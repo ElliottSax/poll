@@ -1,8 +1,8 @@
-import { router } from './trpc.js';
-import { raceRouter } from './routers/race.js';
-import { pollRouter } from './routers/poll.js';
-import { forecastRouter } from './routers/forecast.js';
-import { pollsterRouter } from './routers/pollster.js';
+import { router } from './trpc';
+import { raceRouter } from './routers/race';
+import { pollRouter } from './routers/poll';
+import { forecastRouter } from './routers/forecast';
+import { pollsterRouter } from './routers/pollster';
 
 export const appRouter = router({
   race: raceRouter,

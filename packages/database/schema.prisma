@@ -1,0 +1,643 @@
+// Prisma Schema for Polling Dashboard
+// This is the application-level schema file
+// Run: npx prisma migrate dev --name init
+// Run: npx prisma generate
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  extensions = [uuidOssp(map: "uuid-ossp")]
+}
+
+// =====================================================
+// CORE MODELS
+// =====================================================
+
+model Pollster {
+  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  // Identity
+  name         String  @unique @db.VarChar(255)
+  slug         String  @unique @db.VarChar(255)
+  organization String? @db.VarChar(255)
+  website      String? @db.Text
+
+  // Quality Metrics
+  overallAccuracy    Decimal? @map("overall_accuracy") @db.Decimal(5, 2)
+  methodologyGrade   String?  @map("methodology_grade") @db.VarChar(2)
+  transparencyScore  Decimal? @map("transparency_score") @db.Decimal(3, 2)
+  sampleSizeAvg      Int?     @map("sample_size_avg")
+
+  // Bias Analysis
+  partisanLean String? @map("partisan_lean") @db.VarChar(50)
+  houseEffect  Json?   @map("house_effect")
+
+  // Statistics
+  pollCount     Int       @default(0) @map("poll_count")
+  firstPollDate DateTime? @map("first_poll_date") @db.Date
+  lastPollDate  DateTime? @map("last_poll_date") @db.Date
+
+  // Metadata
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  polls Poll[]
+
+  @@index([slug])
+  @@index([overallAccuracy(sort: Desc)])
+  @@index([methodologyGrade])
+  @@map("pollsters")
+}
+
+model Race {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  // Identity
+  raceType String  @map("race_type") @db.VarChar(50)
+  raceName String  @map("race_name") @db.VarChar(255)
+  slug     String  @unique @db.VarChar(255)
+
+  // Geography
+  country  String  @default("USA") @db.VarChar(3)
+  state    String? @db.VarChar(2)
+  district String? @db.VarChar(10)
+  county   String? @db.VarChar(100)
+
+  // Timing
+  electionDate      DateTime @map("election_date") @db.Date
+  isSpecialElection Boolean  @default(false) @map("is_special_election")
+
+  // Candidates (JSONB)
+  candidates Json
+
+  // Current Status
+  status        String   @default("upcoming") @db.VarChar(50)
+  currentLeader String?  @map("current_leader") @db.VarChar(255)
+  currentMargin Decimal? @map("current_margin") @db.Decimal(5, 2)
+
+  // Classification
+  competitiveRating String? @map("competitive_rating") @db.VarChar(50)
+  importanceScore   Int?    @map("importance_score")
+
+  // Electoral College
+  electoralVotes Int? @map("electoral_votes")
+
+  // Metadata
+  description String? @db.Text
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relations
+  polls                Poll[]
+  forecasts            Forecast[]
+  results              Result[]
+  scenarios            Scenario[]
+  predictions          Prediction[]
+  alerts               Alert[]
+  alertSubscriptions   AlertSubscription[]
+  pageviews            Pageview[]
+
+  @@index([raceType])
+  @@index([state])
+  @@index([slug])
+  @@index([electionDate(sort: Desc)])
+  @@index([status])
+  @@index([competitiveRating])
+  @@index([importanceScore(sort: Desc)])
+  @@index([raceType, state])
+  @@map("races")
+}
+
+model Poll {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  // Relationships
+  raceId     String @map("race_id") @db.Uuid
+  pollsterId String @map("pollster_id") @db.Uuid
+
+  race     Race     @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  pollster Pollster @relation(fields: [pollsterId], references: [id], onDelete: Restrict)
+
+  // Timing
+  pollDate       DateTime  @map("poll_date") @db.Date
+  fieldDateStart DateTime? @map("field_date_start") @db.Date
+  fieldDateEnd   DateTime? @map("field_date_end") @db.Date
+
+  // Sample Information
+  sampleSize     Int?    @map("sample_size")
+  methodology    String? @db.VarChar(50)
+  populationType String? @map("population_type") @db.VarChar(50)
+
+  // Quality Indicators
+  partisanAffiliation String?  @map("partisan_affiliation") @db.VarChar(50)
+  transparencyScore   Decimal? @map("transparency_score") @db.Decimal(3, 2)
+  historicalAccuracy  Decimal? @map("historical_accuracy") @db.Decimal(5, 2)
+
+  // Results (JSONB)
+  results   Json
+  crosstabs Json?
+
+  // Statistical Info
+  marginOfError   Decimal? @map("margin_of_error") @db.Decimal(4, 2)
+  confidenceLevel Int?     @default(95) @map("confidence_level")
+
+  // Weighting
+  calculatedWeight Decimal? @map("calculated_weight") @db.Decimal(10, 6)
+
+  // Source
+  sourceUrl String? @map("source_url") @db.Text
+  pdfUrl    String? @map("pdf_url") @db.Text
+  rawData   Json?   @map("raw_data")
+
+  // Flags
+  isPartisan Boolean @default(false) @map("is_partisan")
+  isOutlier  Boolean @default(false) @map("is_outlier")
+  isVerified Boolean @default(true) @map("is_verified")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([raceId])
+  @@index([pollsterId])
+  @@index([pollDate(sort: Desc)])
+  @@index([raceId, pollDate(sort: Desc)])
+  @@index([methodology])
+  @@map("polls")
+}
+
+model Forecast {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  // Relationship
+  raceId String @map("race_id") @db.Uuid
+  race   Race   @relation(fields: [raceId], references: [id], onDelete: Cascade)
+
+  // Timing
+  forecastDate DateTime @map("forecast_date") @db.Date
+
+  // Model Information
+  modelVersion String @map("model_version") @db.VarChar(50)
+
+  // Predictions (JSONB)
+  probabilities        Json
+  predictedMargins     Json    @map("predicted_margins")
+  predictedVoteShare   Json    @map("predicted_vote_share")
+  confidenceIntervals  Json?   @map("confidence_intervals")
+
+  // Simulation Statistics
+  simulationsRun          Int      @default(10000) @map("simulations_run")
+  volatilityIndex         Decimal? @map("volatility_index") @db.Decimal(5, 2)
+  winProbabilityChange    Decimal? @map("win_probability_change") @db.Decimal(5, 2)
+
+  // Input Data Quality
+  contributingPolls Int?     @map("contributing_polls")
+  pollQualityScore  Decimal? @map("poll_quality_score") @db.Decimal(5, 2)
+  oldestPollDays    Int?     @map("oldest_poll_days")
+  newestPollDays    Int?     @map("newest_poll_days")
+
+  // Electoral College
+  electoralVotesExpected Json? @map("electoral_votes_expected")
+
+  // Notes
+  notes String? @db.Text
+
+  // Timestamp
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([raceId])
+  @@index([forecastDate(sort: Desc)])
+  @@index([raceId, forecastDate(sort: Desc)])
+  @@index([modelVersion])
+  @@map("forecasts")
+}
+
+model Result {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  // Relationship
+  raceId String @map("race_id") @db.Uuid
+  race   Race   @relation(fields: [raceId], references: [id], onDelete: Cascade)
+
+  // Timing
+  reportedAt DateTime @map("reported_at") @db.Timestamptz(6)
+
+  // Geographic Granularity
+  level      String  @db.VarChar(50)
+  state      String? @db.VarChar(2)
+  county     String? @db.VarChar(100)
+  precinctId String? @map("precinct_id") @db.VarChar(100)
+
+  // Vote Counts (JSONB)
+  votes       Json
+  votesByType Json? @map("votes_by_type")
+
+  // Reporting Status
+  precinctsReporting Int?     @map("precincts_reporting")
+  totalPrecincts     Int?     @map("total_precincts")
+  percentReporting   Decimal? @map("percent_reporting") @db.Decimal(5, 2)
+
+  // Estimates
+  estimatedVotesRemaining Int? @map("estimated_votes_remaining")
+  expectedVoteTotal       Int? @map("expected_vote_total")
+
+  // Timestamp
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([raceId])
+  @@index([reportedAt(sort: Desc)])
+  @@index([raceId, reportedAt(sort: Desc)])
+  @@index([level])
+  @@index([state, county])
+  @@map("results")
+}
+
+// =====================================================
+// USER & SOCIAL MODELS
+// =====================================================
+
+model User {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  // Authentication
+  email         String   @unique @db.VarChar(255)
+  emailVerified Boolean  @default(false) @map("email_verified")
+  passwordHash  String?  @map("password_hash") @db.Text
+
+  // OAuth Providers
+  googleId  String? @unique @map("google_id") @db.VarChar(255)
+  twitterId String? @unique @map("twitter_id") @db.VarChar(255)
+  githubId  String? @unique @map("github_id") @db.VarChar(255)
+
+  // Profile
+  username    String? @unique @db.VarChar(100)
+  displayName String? @map("display_name") @db.VarChar(255)
+  avatarUrl   String? @map("avatar_url") @db.Text
+  bio         String? @db.Text
+
+  // Preferences
+  trackedRaces             String[] @map("tracked_races") @db.Uuid
+  notificationPreferences  Json     @default("{\"email\": true, \"push\": false, \"types\": [\"rating_change\", \"forecast_shift\"]}") @map("notification_preferences")
+  theme                    String   @default("light") @db.VarChar(20)
+
+  // Gamification
+  predictionScore    Int @default(0) @map("prediction_score")
+  correctPredictions Int @default(0) @map("correct_predictions")
+  totalPredictions   Int @default(0) @map("total_predictions")
+
+  // Leaderboard
+  rank   Int?    @map("rank")
+  league String  @default("Bronze") @db.VarChar(50)
+
+  // Subscription
+  subscriptionTier   String  @default("free") @map("subscription_tier") @db.VarChar(50)
+  subscriptionStatus String? @map("subscription_status") @db.VarChar(50)
+  stripeCustomerId   String? @map("stripe_customer_id") @db.VarChar(255)
+
+  // Permissions
+  role       String  @default("user") @db.VarChar(50)
+  isVerified Boolean @default(false) @map("is_verified")
+  isBanned   Boolean @default(false) @map("is_banned")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  lastLogin DateTime? @map("last_login") @db.Timestamptz(6)
+
+  // Relations
+  scenarios           Scenario[]
+  predictions         Prediction[]
+  apiKeys             ApiKey[]
+  alertSubscriptions  AlertSubscription[]
+  pageviews           Pageview[]
+
+  @@index([email])
+  @@index([username])
+  @@index([rank])
+  @@index([subscriptionTier])
+  @@map("users")
+}
+
+model Scenario {
+  id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String? @map("user_id") @db.Uuid
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Content
+  title       String @db.VarChar(255)
+  description String? @db.Text
+
+  // Adjustments (JSONB)
+  pollAdjustments       Json  @map("poll_adjustments")
+  electoralCollegeResult Json? @map("electoral_college_result")
+  senateResult          Json? @map("senate_result")
+  houseResult           Json? @map("house_result")
+
+  // Social Metrics
+  views      Int     @default(0)
+  likes      Int     @default(0)
+  shares     Int     @default(0)
+  isPublic   Boolean @default(true) @map("is_public")
+  isFeatured Boolean @default(false) @map("is_featured")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // Relationship (for race-specific scenarios)
+  raceId String? @map("race_id") @db.Uuid
+  race   Race?   @relation(fields: [raceId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([isPublic])
+  @@index([isFeatured])
+  @@index([views(sort: Desc)])
+  @@index([likes(sort: Desc)])
+  @@map("scenarios")
+}
+
+model Prediction {
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  raceId String @map("race_id") @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  race Race @relation(fields: [raceId], references: [id], onDelete: Cascade)
+
+  // Prediction
+  predictedWinner    String   @map("predicted_winner") @db.VarChar(255)
+  predictedMargin    Decimal? @map("predicted_margin") @db.Decimal(5, 2)
+  predictedVoteShare Json?    @map("predicted_vote_share")
+  confidenceLevel    Int?     @map("confidence_level")
+
+  // Wager (virtual currency)
+  pointsWagered Int @default(0) @map("points_wagered")
+
+  // Result
+  isCorrect Boolean? @map("is_correct")
+  pointsWon Int?     @map("points_won")
+
+  // Timestamps
+  predictedAt DateTime  @default(now()) @map("predicted_at") @db.Timestamptz(6)
+  lockedAt    DateTime? @map("locked_at") @db.Timestamptz(6)
+  resolvedAt  DateTime? @map("resolved_at") @db.Timestamptz(6)
+
+  @@unique([userId, raceId])
+  @@index([userId])
+  @@index([raceId])
+  @@index([lockedAt])
+  @@map("predictions")
+}
+
+model Alert {
+  id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  raceId String? @map("race_id") @db.Uuid
+
+  race Race? @relation(fields: [raceId], references: [id], onDelete: Cascade)
+
+  // Alert Type
+  alertType String @map("alert_type") @db.VarChar(50)
+  severity  String @default("medium") @db.VarChar(20)
+
+  // Content
+  title   String @db.VarChar(255)
+  message String @db.Text
+
+  // Change Details
+  oldValue  String?  @map("old_value") @db.VarChar(100)
+  newValue  String?  @map("new_value") @db.VarChar(100)
+  magnitude Decimal? @db.Decimal(5, 2)
+
+  // Metadata
+  metadata Json?
+
+  // Distribution
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  sentAt    DateTime? @map("sent_at") @db.Timestamptz(6)
+
+  // Targeting
+  minImportance   Int?     @map("min_importance")
+  targetUserIds   String[] @map("target_user_ids") @db.Uuid
+
+  @@index([raceId])
+  @@index([alertType])
+  @@index([createdAt(sort: Desc)])
+  @@index([sentAt(sort: Desc)])
+  @@index([severity])
+  @@map("alerts")
+}
+
+model AlertSubscription {
+  id     String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String  @map("user_id") @db.Uuid
+  raceId String? @map("race_id") @db.Uuid
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  race Race? @relation(fields: [raceId], references: [id], onDelete: Cascade)
+
+  // Subscription Settings
+  alertTypes   String[] @map("alert_types") @db.VarChar(50)
+  minMagnitude Decimal  @default(2.0) @map("min_magnitude") @db.Decimal(5, 2)
+
+  // Delivery Methods
+  emailEnabled Boolean @default(true) @map("email_enabled")
+  pushEnabled  Boolean @default(false) @map("push_enabled")
+  smsEnabled   Boolean @default(false) @map("sms_enabled")
+
+  // Timestamp
+  subscribedAt DateTime @default(now()) @map("subscribed_at") @db.Timestamptz(6)
+
+  @@unique([userId, raceId])
+  @@index([userId])
+  @@index([raceId])
+  @@map("alert_subscriptions")
+}
+
+// =====================================================
+// API & DEVELOPER MODELS
+// =====================================================
+
+model ApiKey {
+  id     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Key Details
+  keyHash   String  @unique @map("key_hash") @db.Text
+  keyPrefix String  @map("key_prefix") @db.VarChar(10)
+  name      String? @db.VarChar(255)
+
+  // Permissions
+  tier   String   @default("free") @db.VarChar(50)
+  scopes String[] @db.VarChar(50)
+
+  // Rate Limits
+  rateLimitPerDay  Int? @map("rate_limit_per_day")
+  rateLimitPerHour Int? @map("rate_limit_per_hour")
+
+  // Usage Tracking
+  requestsToday    Int       @default(0) @map("requests_today")
+  requestsThisHour Int       @default(0) @map("requests_this_hour")
+  totalRequests    Int       @default(0) @map("total_requests")
+  lastUsedAt       DateTime? @map("last_used_at") @db.Timestamptz(6)
+
+  // Status
+  isActive Boolean @default(true) @map("is_active")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz(6)
+
+  // Relations
+  usageLogs ApiUsageLog[]
+
+  @@index([userId])
+  @@index([keyHash])
+  @@index([isActive])
+  @@map("api_keys")
+}
+
+model ApiUsageLog {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  apiKeyId String @map("api_key_id") @db.Uuid
+
+  apiKey ApiKey @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+
+  // Request Details
+  endpoint String @db.VarChar(255)
+  method   String @db.VarChar(10)
+
+  // Response
+  statusCode     Int  @map("status_code")
+  responseTimeMs Int? @map("response_time_ms")
+
+  // Client Info
+  ipAddress String? @map("ip_address") @db.Inet
+  userAgent String? @map("user_agent") @db.Text
+
+  // Timestamp
+  requestedAt DateTime @default(now()) @map("requested_at") @db.Timestamptz(6)
+
+  @@index([apiKeyId])
+  @@index([requestedAt(sort: Desc)])
+  @@index([endpoint])
+  @@map("api_usage_logs")
+}
+
+// =====================================================
+// ANALYTICS MODELS
+// =====================================================
+
+model Pageview {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  // Page Details
+  path   String  @db.VarChar(500)
+  raceId String? @map("race_id") @db.Uuid
+
+  race Race? @relation(fields: [raceId], references: [id], onDelete: SetNull)
+
+  // User Info
+  userId    String? @map("user_id") @db.Uuid
+  sessionId String  @map("session_id") @db.Uuid
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Client Info
+  ipAddress String? @map("ip_address") @db.Inet
+  userAgent String? @map("user_agent") @db.Text
+  referrer  String? @db.Text
+
+  // Geo (from IP)
+  country String? @db.VarChar(2)
+  region  String? @db.VarChar(100)
+  city    String? @db.VarChar(100)
+
+  // Timestamp
+  viewedAt DateTime @default(now()) @map("viewed_at") @db.Timestamptz(6)
+
+  @@index([path])
+  @@index([raceId])
+  @@index([viewedAt(sort: Desc)])
+  @@index([sessionId])
+  @@map("pageviews")
+}
+
+// =====================================================
+// ENUMS (for type safety)
+// =====================================================
+
+enum RaceType {
+  PRESIDENT  @map("president")
+  SENATE     @map("senate")
+  HOUSE      @map("house")
+  GOVERNOR   @map("governor")
+  MAYOR      @map("mayor")
+
+  @@map("race_type_enum")
+}
+
+enum RaceStatus {
+  UPCOMING  @map("upcoming")
+  ACTIVE    @map("active")
+  COMPLETED @map("completed")
+
+  @@map("race_status_enum")
+}
+
+enum CompetitiveRating {
+  SAFE_D   @map("safe_d")
+  LIKELY_D @map("likely_d")
+  LEAN_D   @map("lean_d")
+  TOSSUP   @map("tossup")
+  LEAN_R   @map("lean_r")
+  LIKELY_R @map("likely_r")
+  SAFE_R   @map("safe_r")
+
+  @@map("competitive_rating_enum")
+}
+
+enum Methodology {
+  PHONE  @map("phone")
+  ONLINE @map("online")
+  IVR    @map("ivr")
+  SMS    @map("sms")
+  MIXED  @map("mixed")
+
+  @@map("methodology_enum")
+}
+
+enum PopulationType {
+  RV @map("rv") // Registered Voters
+  LV @map("lv") // Likely Voters
+  A  @map("a")  // All Adults
+
+  @@map("population_type_enum")
+}
+
+enum SubscriptionTier {
+  FREE         @map("free")
+  PREMIUM      @map("premium")
+  PRO          @map("pro")
+  ENTERPRISE   @map("enterprise")
+
+  @@map("subscription_tier_enum")
+}
+
+enum UserRole {
+  USER    @map("user")
+  ANALYST @map("analyst")
+  ADMIN   @map("admin")
+
+  @@map("user_role_enum")
+}

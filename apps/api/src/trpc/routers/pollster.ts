@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { router, publicProcedure } from '../trpc.js';
+import { TRPCError } from '@trpc/server';
+import { router, publicProcedure } from '../trpc';
 
 export const pollsterRouter = router({
   // List pollsters
@@ -56,7 +57,10 @@ export const pollsterRouter = router({
       });
 
       if (!pollster) {
-        throw new Error('Pollster not found');
+        throw new TRPCError({
+          code: 'NOT_FOUND',
+          message: 'Pollster not found',
+        });
       }
 
       return pollster;

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { router, publicProcedure } from '../trpc.js';
+import { router, publicProcedure } from '../trpc';
 
 export const forecastRouter = router({
   // Get forecast by race ID
@@ -16,7 +16,7 @@ export const forecastRouter = router({
       return forecast;
     }),
 
-  // Run scenario simulation
+  // Run scenario simulation (mock for now)
   simulate: publicProcedure
     .input(
       z.object({
@@ -30,12 +30,13 @@ export const forecastRouter = router({
         simulations: z.number().min(1000).max(100000).default(10000),
       })
     )
-    .query(async ({ input, ctx }) => {
-      // TODO: Implement Monte Carlo simulation
-      // For now, return placeholder
+    .query(async ({ input }) => {
+      // TODO: Implement actual Monte Carlo simulation
+      // For MVP, return mock results
       return {
         win_probability: { D: 0.5, R: 0.5 },
         simulations_run: input.simulations,
+        adjustments_applied: input.adjustments.length,
       };
     }),
 });

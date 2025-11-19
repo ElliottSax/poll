@@ -1,0 +1,102 @@
+// Prisma schema for Polling Dashboard
+// This is a simplified version for initial development
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Core models
+model Race {
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  name          String
+  state_code    String
+  district      String?
+  race_type     String
+  election_date DateTime
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  polls      Poll[]
+  candidates Candidate[]
+  forecast   Forecast?
+
+  @@map("races")
+}
+
+model Poll {
+  id             String   @id @default(uuid())
+  race_id        String
+  pollster_id    String
+  sample_size    Int
+  population     String
+  methodology    String
+  field_date     DateTime
+  publish_date   DateTime?
+  margin_of_error Float?
+  url            String?
+  created_at     DateTime @default(now())
+
+  race     Race     @relation(fields: [race_id], references: [id])
+  pollster Pollster @relation(fields: [pollster_id], references: [id])
+
+  @@index([race_id, field_date(sort: Desc)])
+  @@map("polls")
+}
+
+model Pollster {
+  id                   String  @id @default(uuid())
+  name                 String  @unique
+  slug                 String  @unique
+  rating               String?
+  methodology_score    Int?
+  historical_accuracy  Float?
+  bias_score           Float?
+  primary_methodology  String?
+  aapor_member         Boolean @default(false)
+  partisan             String?
+  
+  polls Poll[]
+
+  @@map("pollsters")
+}
+
+model Candidate {
+  id          String  @id @default(uuid())
+  race_id     String
+  name        String
+  party       String
+  is_incumbent Boolean @default(false)
+
+  race Race @relation(fields: [race_id], references: [id])
+
+  @@map("candidates")
+}
+
+model Forecast {
+  id              String   @id @default(uuid())
+  race_id         String   @unique
+  forecast_type   String
+  win_probability Json
+  simulations     Int
+  last_updated    DateTime @default(now())
+
+  race Race @relation(fields: [race_id], references: [id])
+
+  @@map("forecasts")
+}
+
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  name       String?
+  created_at DateTime @default(now())
+
+  @@map("users")
+}
