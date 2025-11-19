@@ -1,0 +1,23 @@
+{
+  "name": "@poll/ui",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "clsx": "^2.1.0"
+  },
+  "devDependencies": {
+    "@poll/config": "*",
+    "@types/react": "^18.2.48",
+    "typescript": "^5.3.3"
+  }
+}
