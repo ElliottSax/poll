@@ -5,6 +5,7 @@ import { ExternalLink, Award, TrendingUp, BarChart } from 'lucide-react'
 import { PollsterPolls } from '@/components/features/pollsters/PollsterPolls'
 import { PollsterStats } from '@/components/features/pollsters/PollsterStats'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { SafeLink } from '@/components/common/SafeHtml'
 
 interface Pollster {
   id: string
@@ -91,15 +92,13 @@ export default async function PollsterDetailPage({
           <div>
             <h1 className="text-4xl font-bold mb-2">{pollster.name}</h1>
             {pollster.website && (
-              <a
+              <SafeLink
                 href={pollster.website}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="text-primary hover:underline inline-flex items-center gap-1"
               >
                 Visit website
                 <ExternalLink className="h-4 w-4" />
-              </a>
+              </SafeLink>
             )}
           </div>
 

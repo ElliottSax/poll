@@ -18,6 +18,7 @@ import { candidatesRoutes } from './routes/candidates'
 import { forecastsRoutes } from './routes/forecasts'
 import { authRoutes } from './routes/auth'
 import { healthRoutes } from './routes/health'
+import { electoralMapRoutes } from './routes/electoral-map'
 
 // Create Fastify instance
 const fastify = Fastify({
@@ -96,6 +97,7 @@ async function registerPlugins() {
         { name: 'pollsters', description: 'Pollster endpoints' },
         { name: 'candidates', description: 'Candidate endpoints' },
         { name: 'forecasts', description: 'Forecast endpoints' },
+        { name: 'electoral-map', description: 'Electoral map endpoints' },
       ],
     },
   })
@@ -118,6 +120,7 @@ async function registerRoutes() {
   await fastify.register(pollstersRoutes, { prefix: '/api/pollsters' })
   await fastify.register(candidatesRoutes, { prefix: '/api/candidates' })
   await fastify.register(forecastsRoutes, { prefix: '/api/forecasts' })
+  await fastify.register(electoralMapRoutes, { prefix: '/api/electoral-map' })
 }
 
 // Start server

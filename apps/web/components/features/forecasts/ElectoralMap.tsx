@@ -55,23 +55,36 @@ function getCategoryLabel(category: string): string {
 }
 
 export function ElectoralMap() {
-  // In production, this would fetch real data
-  const battlegroundStates = mockStateResults
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
-  // Calculate total electoral votes for each party
-  const democraticEV = battlegroundStates
-    .filter(s => s.leader.party === 'D')
-    .reduce((sum, s) => sum + s.electoralVotes, 0)
+  // Fetch real electoral map data
+  const { data, isLoading, error } = useQuery<{
+    states: StateResult[]
+    democraticTotal: number
+    republicanTotal: number
+    lastUpdated: string
+  }>({
+    queryKey: ['/api/electoral-map/battleground'],
+    queryFn: async () => {
+      const res = await fetch(`${apiUrl}/api/electoral-map/battleground`)
+      if (!res.ok) {
+        throw new Error('Failed to fetch electoral map data')
+      }
+      return res.json()
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+  })
 
-  const republicanEV = battlegroundStates
-    .filter(s => s.leader.party === 'R')
-    .reduce((sum, s) => sum + s.electoralVotes, 0)
-
-  // Add safe states (simplified - in production, this would be comprehensive)
-  const democraticTotal = democraticEV + 226 // Safe D states
-  const republicanTotal = republicanEV + 219 // Safe R states
-
+  // Use mock data as fallback during loading or error
+  const battlegroundStates = data?.states || mockStateResults
+  const democraticTotal = data?.democraticTotal || 0
+  const republicanTotal = data?.republicanTotal || 0
   const tossupStates = battlegroundStates.filter(s => s.category === 'toss-up')
+
+  if (error) {
+    console.error('Error fetching electoral map:', error)
+  }
 
   return (
     <div className="space-y-6">

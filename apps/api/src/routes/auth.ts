@@ -5,6 +5,7 @@ import { sign } from 'jsonwebtoken'
 import { prisma } from '../utils/prisma'
 import { config } from '../config/env'
 import { verifyToken, optionalAuth } from '../middleware/auth'
+import { sanitizeInput, sanitizeEmail } from '../utils/sanitize'
 
 const signupSchema = z.object({
   email: z.string().email().toLowerCase().trim(),
@@ -23,8 +24,8 @@ const loginSchema = z.object({
 })
 
 const updateProfileSchema = z.object({
-  name: z.string().min(2).max(100).optional(),
-  bio: z.string().max(500).optional(),
+  name: z.string().min(2).max(100).transform(sanitizeInput).optional(),
+  bio: z.string().max(500).transform(sanitizeInput).optional(),
 })
 
 const changePasswordSchema = z.object({
