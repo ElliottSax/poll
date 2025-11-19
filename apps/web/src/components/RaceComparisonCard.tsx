@@ -8,15 +8,26 @@ interface RaceComparisonCardProps {
   onRemove?: () => void
 }
 
+interface PollAverage {
+  raceSlug: string
+  raceName: string
+  timeframe: number
+  pollsIncluded: number
+  averages: Record<string, number>
+  lastUpdated: string
+}
+
 export default function RaceComparisonCard({ raceSlug, onRemove }: RaceComparisonCardProps) {
   const [race, setRace] = useState<Race | null>(null)
-  const [average, setAverage] = useState<any>(null)
+  const [average, setAverage] = useState<PollAverage | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadRaceData() {
       try {
         setLoading(true)
+        setError(null)
         const [raceData, avgData] = await Promise.all([
           api.getRace(raceSlug),
           api.getRaceAverage(raceSlug, 14),
@@ -25,6 +36,7 @@ export default function RaceComparisonCard({ raceSlug, onRemove }: RaceCompariso
         setAverage(avgData)
       } catch (err) {
         console.error('Failed to load race data:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load race data')
       } finally {
         setLoading(false)
       }
@@ -45,6 +57,17 @@ export default function RaceComparisonCard({ raceSlug, onRemove }: RaceCompariso
     )
   }
 
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="text-center py-4">
+          <p className="text-red-600 text-sm mb-2">Error loading race</p>
+          <p className="text-gray-500 text-xs">{error}</p>
+        </div>
+      </div>
+    )
+  }
+
   if (!race) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -59,6 +82,8 @@ export default function RaceComparisonCard({ raceSlug, onRemove }: RaceCompariso
 
   const getBarWidth = (percentage: number) => {
     const maxPercentage = candidates.length > 0 ? (candidates[0][1] as number) : 100
+    // Prevent division by zero
+    if (maxPercentage === 0) return '0%'
     return `${(percentage / maxPercentage) * 100}%`
   }
 
