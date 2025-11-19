@@ -5,10 +5,11 @@ import { TrendingRaces } from '@/components/features/home/TrendingRaces'
 import { RecentPolls } from '@/components/features/home/RecentPolls'
 import { Hero } from '@/components/features/home/Hero'
 import { Stats } from '@/components/features/home/Stats'
-import { PageLoader } from '@/components/ui/LoadingSpinner'
+import { RaceCardSkeleton, StatsCardSkeleton, PollTableSkeleton } from '@/components/ui/Skeleton'
 import { Container, Section } from '@/components/layout/Container'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 
 export const metadata: Metadata = {
   title: 'Poll Tracker - Real-Time Election Polling Data & Analysis',
@@ -34,9 +35,11 @@ export default function HomePage() {
       {/* Stats Overview */}
       <Section>
         <Container>
-          <Suspense fallback={<PageLoader message="Loading statistics..." />}>
-            <Stats />
-          </Suspense>
+          <ErrorBoundary fallback={<div className="text-center py-8 text-red-600">Failed to load statistics</div>}>
+            <Suspense fallback={<StatsCardSkeleton count={4} />}>
+              <Stats />
+            </Suspense>
+          </ErrorBoundary>
         </Container>
       </Section>
 
@@ -47,9 +50,11 @@ export default function HomePage() {
             <h2 className="text-3xl font-bold mb-2">Featured Races</h2>
             <p className="text-gray-600">Key races to watch in the upcoming election</p>
           </div>
-          <Suspense fallback={<PageLoader message="Loading featured races..." />}>
-            <FeaturedRaces />
-          </Suspense>
+          <ErrorBoundary fallback={<div className="text-center py-8 text-red-600">Failed to load featured races</div>}>
+            <Suspense fallback={<RaceCardSkeleton count={3} />}>
+              <FeaturedRaces />
+            </Suspense>
+          </ErrorBoundary>
         </Container>
       </Section>
 
@@ -60,9 +65,11 @@ export default function HomePage() {
             <h2 className="text-3xl font-bold mb-2">Trending Races</h2>
             <p className="text-gray-600">Races with the most recent polling activity</p>
           </div>
-          <Suspense fallback={<PageLoader message="Loading trending races..." />}>
-            <TrendingRaces />
-          </Suspense>
+          <ErrorBoundary fallback={<div className="text-center py-8 text-red-600">Failed to load trending races</div>}>
+            <Suspense fallback={<RaceCardSkeleton count={3} />}>
+              <TrendingRaces />
+            </Suspense>
+          </ErrorBoundary>
         </Container>
       </Section>
 
@@ -73,9 +80,11 @@ export default function HomePage() {
             <h2 className="text-3xl font-bold mb-2">Recent Polls</h2>
             <p className="text-gray-600">Latest polling data from top-rated pollsters</p>
           </div>
-          <Suspense fallback={<PageLoader message="Loading recent polls..." />}>
-            <RecentPolls />
-          </Suspense>
+          <ErrorBoundary fallback={<div className="text-center py-8 text-red-600">Failed to load recent polls</div>}>
+            <Suspense fallback={<PollTableSkeleton rows={5} />}>
+              <RecentPolls />
+            </Suspense>
+          </ErrorBoundary>
         </Container>
       </Section>
 

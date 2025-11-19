@@ -134,7 +134,11 @@ export function RaceCard({
           <div className="mt-4 pt-3 border-t text-xs text-muted-foreground flex items-center justify-between">
             {lastUpdated && (
               <span>
-                Updated {new Date(lastUpdated).toLocaleDateString()}
+                Updated {new Date(lastUpdated).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
               </span>
             )}
             {pollCount && (

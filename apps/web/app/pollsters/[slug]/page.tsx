@@ -4,7 +4,8 @@ import { notFound } from 'next/navigation'
 import { Container, Section, Grid } from '@/components/layout/Container'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { PageLoader } from '@/components/ui/LoadingSpinner'
+import { PollTableSkeleton } from '@/components/ui/Skeleton'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { PollTable } from '@/components/features/PollTable'
 import { TrendingUp, BarChart3, Calendar, Phone, Globe } from 'lucide-react'
 
@@ -188,9 +189,11 @@ export default async function PollsterDetailPage({
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Suspense fallback={<PageLoader message="Loading polls..." />}>
-                    <PollTable polls={mockRecentPolls} showGrade={false} />
-                  </Suspense>
+                  <ErrorBoundary fallback={<div className="text-center py-8 text-red-600">Failed to load polls</div>}>
+                    <Suspense fallback={<PollTableSkeleton rows={5} />}>
+                      <PollTable polls={mockRecentPolls} showGrade={false} />
+                    </Suspense>
+                  </ErrorBoundary>
                 </CardContent>
               </Card>
 

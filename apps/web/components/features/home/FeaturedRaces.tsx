@@ -2,6 +2,7 @@
 
 import { RaceCard } from '@/components/features/RaceCard'
 import { Grid } from '@/components/layout/Container'
+import { getTimeAgo } from '@/lib/constants'
 
 // This will be replaced with actual data from API
 const mockRaces = [
@@ -29,7 +30,7 @@ const mockRaces = [
       },
     ],
     pollCount: 127,
-    lastUpdated: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+    lastUpdated: getTimeAgo.hours(2),
   },
   {
     id: '2',
@@ -57,7 +58,7 @@ const mockRaces = [
       },
     ],
     pollCount: 23,
-    lastUpdated: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
+    lastUpdated: getTimeAgo.hours(5),
   },
   {
     id: '3',
@@ -84,7 +85,7 @@ const mockRaces = [
       },
     ],
     pollCount: 31,
-    lastUpdated: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+    lastUpdated: getTimeAgo.days(1),
   },
 ]
 

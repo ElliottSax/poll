@@ -133,6 +133,7 @@ export function PollTable({ polls, className, compact = false, showGrade = true 
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:text-blue-700"
+                  aria-label={`View ${poll.pollster} poll details`}
                 >
                   <ExternalLink className="h-4 w-4" />
                 </a>
@@ -251,7 +252,7 @@ export function PollTable({ polls, className, compact = false, showGrade = true 
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex text-blue-600 hover:text-blue-700"
-                    aria-label="View poll details"
+                    aria-label={`View ${poll.pollster} poll details (opens in new tab)`}
                   >
                     <ExternalLink className="h-4 w-4" />
                   </a>

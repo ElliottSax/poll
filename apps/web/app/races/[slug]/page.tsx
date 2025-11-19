@@ -2,7 +2,8 @@ import { Metadata } from 'next'
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { Container, Section, Grid } from '@/components/layout/Container'
-import { PageLoader } from '@/components/ui/LoadingSpinner'
+import { Skeleton, ChartSkeleton, PollTableSkeleton } from '@/components/ui/Skeleton'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { RaceHeader } from '@/components/features/race/RaceHeader'
 import { RacePolls } from '@/components/features/race/RacePolls'
 import { RaceTrends } from '@/components/features/race/RaceTrends'
@@ -63,9 +64,11 @@ export default async function RaceDetailPage({
       {/* Race Header */}
       <Section variant="default">
         <Container>
-          <Suspense fallback={<PageLoader message="Loading race details..." />}>
-            <RaceHeader slug={params.slug} />
-          </Suspense>
+          <ErrorBoundary fallback={<div className="text-center py-8 text-red-600">Failed to load race details</div>}>
+            <Suspense fallback={<div className="space-y-2"><Skeleton className="h-10 w-3/4" /><Skeleton className="h-6 w-1/2" /></div>}>
+              <RaceHeader slug={params.slug} />
+            </Suspense>
+          </ErrorBoundary>
         </Container>
       </Section>
 
@@ -81,9 +84,11 @@ export default async function RaceDetailPage({
                   <CardTitle>Polling Trends</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Suspense fallback={<PageLoader message="Loading trends..." />}>
-                    <RaceTrends slug={params.slug} />
-                  </Suspense>
+                  <ErrorBoundary fallback={<div className="text-center py-8 text-red-600">Failed to load trends</div>}>
+                    <Suspense fallback={<ChartSkeleton />}>
+                      <RaceTrends slug={params.slug} />
+                    </Suspense>
+                  </ErrorBoundary>
                 </CardContent>
               </Card>
 
@@ -96,9 +101,11 @@ export default async function RaceDetailPage({
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <Suspense fallback={<PageLoader message="Loading polls..." />}>
-                    <RacePolls slug={params.slug} />
-                  </Suspense>
+                  <ErrorBoundary fallback={<div className="text-center py-8 text-red-600">Failed to load polls</div>}>
+                    <Suspense fallback={<PollTableSkeleton rows={5} />}>
+                      <RacePolls slug={params.slug} />
+                    </Suspense>
+                  </ErrorBoundary>
                 </CardContent>
               </Card>
             </div>
@@ -106,9 +113,11 @@ export default async function RaceDetailPage({
             {/* Sidebar - 1/4 width */}
             <div className="col-span-4 lg:col-span-1 space-y-6">
               {/* Forecast Card */}
-              <Suspense fallback={<PageLoader message="Loading forecast..." />}>
-                <RaceForecast slug={params.slug} />
-              </Suspense>
+              <ErrorBoundary fallback={<Card><CardContent className="pt-6 text-center text-red-600">Failed to load forecast</CardContent></Card>}>
+                <Suspense fallback={<Card><CardContent className="pt-6"><Skeleton className="h-32 w-full" /></CardContent></Card>}>
+                  <RaceForecast slug={params.slug} />
+                </Suspense>
+              </ErrorBoundary>
 
               {/* Race Info Card */}
               <Card>

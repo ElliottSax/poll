@@ -1,7 +1,8 @@
 import { Metadata } from 'next'
 import { Suspense } from 'react'
 import { Container, Section } from '@/components/layout/Container'
-import { PageLoader } from '@/components/ui/LoadingSpinner'
+import { RaceCardSkeleton } from '@/components/ui/Skeleton'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { RaceFilters } from '@/components/features/race/RaceFilters'
 import { RaceList } from '@/components/features/race/RaceList'
 
@@ -43,13 +44,15 @@ export default function RacesPage({
       {/* Race List */}
       <Section variant="muted">
         <Container>
-          <Suspense fallback={<PageLoader message="Loading races..." />}>
-            <RaceList
-              type={searchParams.type}
-              state={searchParams.state}
-              status={searchParams.status}
-            />
-          </Suspense>
+          <ErrorBoundary fallback={<div className="text-center py-8 text-red-600">Failed to load races</div>}>
+            <Suspense fallback={<RaceCardSkeleton count={6} />}>
+              <RaceList
+                type={searchParams.type}
+                state={searchParams.state}
+                status={searchParams.status}
+              />
+            </Suspense>
+          </ErrorBoundary>
         </Container>
       </Section>
     </>

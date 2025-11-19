@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { Container, Section, Grid } from '@/components/layout/Container'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { PageLoader } from '@/components/ui/LoadingSpinner'
+import { CardGridSkeleton } from '@/components/ui/Skeleton'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { TrendingUp, Award, BarChart3 } from 'lucide-react'
 
 export const metadata: Metadata = {
@@ -194,9 +195,11 @@ export default function PollstersPage() {
             </p>
           </div>
 
-          <Suspense fallback={<PageLoader message="Loading pollsters..." />}>
-            <PollsterGrid />
-          </Suspense>
+          <ErrorBoundary fallback={<div className="text-center py-8 text-red-600">Failed to load pollsters</div>}>
+            <Suspense fallback={<CardGridSkeleton count={6} cols={3} />}>
+              <PollsterGrid />
+            </Suspense>
+          </ErrorBoundary>
         </Container>
       </Section>
     </>
