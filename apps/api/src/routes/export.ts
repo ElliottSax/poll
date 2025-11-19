@@ -44,8 +44,21 @@ function convertToCSV(data: any[], headers?: string[]): string {
       const value = item[header]
       // Handle special cases
       if (value === null || value === undefined) return ''
-      if (typeof value === 'object') return JSON.stringify(value).replace(/"/g, '""')
-      if (typeof value === 'string' && value.includes(',')) return `"${value}"`
+
+      // For objects, stringify and properly escape
+      if (typeof value === 'object') {
+        const stringified = JSON.stringify(value)
+        return `"${stringified.replace(/"/g, '""')}"`
+      }
+
+      // For strings, check if escaping is needed (comma, quote, or newline)
+      if (typeof value === 'string') {
+        if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+          return `"${value.replace(/"/g, '""')}"`
+        }
+        return value
+      }
+
       return value
     }).join(',')
   })
