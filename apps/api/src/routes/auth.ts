@@ -7,14 +7,19 @@ import { config } from '../config/env'
 import { verifyToken, optionalAuth } from '../middleware/auth'
 
 const signupSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8).max(100),
-  name: z.string().min(2).max(100),
+  email: z.string().email().toLowerCase().trim(),
+  password: z.string()
+    .min(8)
+    .max(100)
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
+      message: "Password must contain uppercase, lowercase, number, and special character"
+    }),
+  name: z.string().min(2).max(100).trim(),
 })
 
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string(),
+  email: z.string().email().toLowerCase().trim(),
+  password: z.string().min(1).max(100),
 })
 
 const updateProfileSchema = z.object({
@@ -23,8 +28,13 @@ const updateProfileSchema = z.object({
 })
 
 const changePasswordSchema = z.object({
-  currentPassword: z.string(),
-  newPassword: z.string().min(8).max(100),
+  currentPassword: z.string().min(1).max(100),
+  newPassword: z.string()
+    .min(8)
+    .max(100)
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
+      message: "Password must contain uppercase, lowercase, number, and special character"
+    }),
 })
 
 export async function authRoutes(
@@ -296,6 +306,12 @@ export async function authRoutes(
   // Change password
   fastify.post('/change-password', {
     preHandler: [verifyToken],
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '15 minutes'
+      }
+    },
     schema: {
       description: 'Change user password',
       tags: ['auth'],
