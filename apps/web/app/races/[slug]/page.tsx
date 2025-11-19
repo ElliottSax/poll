@@ -51,6 +51,48 @@ export default async function RacePage({ params }: Props) {
     notFound()
   }
 
+  // TODO: Fetch from API - using mock data for now
+  const mockPolls = [
+    {
+      id: '1',
+      pollster: { name: 'Monmouth University', methodologyGrade: 'A+' },
+      pollDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      sampleSize: 1247,
+      marginOfError: 3.2,
+      methodology: 'Phone (RDD)',
+      results: { 'Candidate A': 48.5, 'Candidate B': 45.2, 'Other': 6.3 },
+    },
+    {
+      id: '2',
+      pollster: { name: 'Quinnipiac University', methodologyGrade: 'A-' },
+      pollDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+      sampleSize: 1589,
+      marginOfError: 3.5,
+      methodology: 'Phone (Live Caller)',
+      results: { 'Candidate A': 47.1, 'Candidate B': 46.8, 'Other': 6.1 },
+    },
+  ]
+
+  const mockForecast = {
+    candidates: [
+      { name: 'Candidate A', party: 'D', winProbability: 55.7, expectedVoteShare: 48.9 },
+      { name: 'Candidate B', party: 'R', winProbability: 44.3, expectedVoteShare: 47.2 },
+    ],
+    lastUpdated: new Date().toISOString(),
+    simulations: 10000,
+  }
+
+  const mockTrends = Array.from({ length: 30 }, (_, i) => ({
+    date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    'Candidate A': 47 + Math.random() * 4,
+    'Candidate B': 45 + Math.random() * 4,
+  }))
+
+  const mockCandidates = [
+    { name: 'Candidate A', party: 'D' },
+    { name: 'Candidate B', party: 'R' },
+  ]
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Race Header */}
@@ -61,17 +103,16 @@ export default async function RacePage({ params }: Props) {
         <div className="lg:col-span-2 space-y-8">
           {/* Trends Chart */}
           <section>
-            <h2 className="text-2xl font-bold mb-4">Polling Trends</h2>
             <Suspense fallback={<LoadingSpinner />}>
-              <RaceTrends raceId={race.id} />
+              <RaceTrends trends={mockTrends} candidates={mockCandidates} />
             </Suspense>
           </section>
 
-          {/* Polls Table */}
+          {/* Polls */}
           <section>
             <h2 className="text-2xl font-bold mb-4">Recent Polls</h2>
             <Suspense fallback={<LoadingSpinner />}>
-              <RacePolls raceId={race.id} />
+              <RacePolls polls={mockPolls} />
             </Suspense>
           </section>
         </div>
@@ -80,9 +121,8 @@ export default async function RacePage({ params }: Props) {
         <div className="space-y-8">
           {/* Forecast */}
           <section>
-            <h2 className="text-2xl font-bold mb-4">Forecast</h2>
             <Suspense fallback={<LoadingSpinner />}>
-              <RaceForecast raceId={race.id} />
+              <RaceForecast forecast={mockForecast} />
             </Suspense>
           </section>
 
