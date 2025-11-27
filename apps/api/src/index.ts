@@ -10,6 +10,10 @@ import { logger } from './utils/logger'
 import { prisma } from './utils/prisma'
 import { redis } from './utils/redis'
 
+// Import middleware
+import { errorHandler, notFoundHandler } from './middleware/errorHandler'
+import { logRequest, logResponse } from './middleware/logging'
+
 // Import routes
 import { racesRoutes } from './routes/races'
 import { pollsRoutes } from './routes/polls'
@@ -18,7 +22,7 @@ import { forecastsRoutes } from './routes/forecasts'
 import { healthRoutes } from './routes/health'
 
 // Import services
-import { initializeWebSocketService } from './services/websocket'
+import { initializeWebSocketService, WebSocketService } from './services/websocket'
 
 // Create Fastify instance
 const fastify = Fastify({
@@ -30,23 +34,36 @@ const fastify = Fastify({
 })
 
 // Global WebSocket service reference
-let wsService: any = null
+let wsService: WebSocketService | null = null
 
 // Graceful shutdown
 const closeGracefully = async (signal: string) => {
   fastify.log.info(`Received ${signal}, closing gracefully...`)
 
-  // Close WebSocket connections
-  if (wsService) {
-    await wsService.shutdown()
+  // Set timeout for forced shutdown
+  const forceShutdownTimeout = setTimeout(() => {
+    fastify.log.error('Forced shutdown due to timeout')
+    process.exit(1)
+  }, 10000) // 10 seconds max
+
+  try {
+    // Close WebSocket connections
+    if (wsService) {
+      await wsService.shutdown()
+    }
+
+    // Close other connections
+    await prisma.$disconnect()
+    await redis.quit()
+    await fastify.close()
+
+    clearTimeout(forceShutdownTimeout)
+    process.exit(0)
+  } catch (error) {
+    fastify.log.error({ error }, 'Error during shutdown')
+    clearTimeout(forceShutdownTimeout)
+    process.exit(1)
   }
-
-  // Close other connections
-  await prisma.$disconnect()
-  await redis.quit()
-  await fastify.close()
-
-  process.exit(0)
 }
 
 process.on('SIGINT', () => closeGracefully('SIGINT'))
@@ -114,6 +131,14 @@ async function registerPlugins() {
       deepLinking: false,
     },
   })
+
+  // Request/Response logging hooks
+  fastify.addHook('onRequest', logRequest)
+  fastify.addHook('onResponse', logResponse)
+
+  // Error handlers
+  fastify.setErrorHandler(errorHandler)
+  fastify.setNotFoundHandler(notFoundHandler)
 }
 
 // Register routes

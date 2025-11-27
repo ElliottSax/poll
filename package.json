@@ -87,5 +87,8 @@
     "plugins": [
       "prettier-plugin-tailwindcss"
     ]
+  },
+  "dependencies": {
+    "next": "^14.2.33"
   }
 }

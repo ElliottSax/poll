@@ -1,0 +1,335 @@
+// Polling Dashboard - Database Schema
+// Uses PostgreSQL as the database provider
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// Core Entities
+// ============================================================================
+
+model User {
+  id                       String   @id @default(uuid())
+  email                    String   @unique
+  emailVerified            Boolean  @default(false)
+  password                 String // Hashed
+  username                 String?  @unique
+  displayName              String?
+  avatarUrl                String?
+  bio                      String?
+
+  // Preferences
+  trackedRaces             String[] // Array of race IDs
+  notificationPreferences  Json     @default("{}")
+  theme                    String   @default("light")
+
+  // Gamification
+  predictionScore          Float    @default(0)
+  correctPredictions       Int      @default(0)
+  totalPredictions         Int      @default(0)
+  rank                     Int?
+  league                   String   @default("bronze")
+
+  // Subscription
+  subscriptionTier         String   @default("free")
+  subscriptionStatus       String?
+
+  // Access control
+  role                     String   @default("user") // user, admin, moderator
+  isVerified               Boolean  @default(false)
+  isBanned                 Boolean  @default(false)
+
+  // Timestamps
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  lastLogin                DateTime?
+
+  // Relations
+  predictions              Prediction[]
+  scenarios                Scenario[]
+
+  @@index([email])
+  @@index([username])
+  @@index([role])
+}
+
+model Race {
+  id                  String   @id @default(uuid())
+  slug                String   @unique
+  raceType            String // president, senate, house, governor, mayor
+  raceName            String
+  country             String
+  state               String?
+  district            String?
+  county              String?
+  electionDate        DateTime
+  isSpecialElection   Boolean  @default(false)
+
+  // Status and ratings
+  status              String // upcoming, active, completed
+  currentLeader       String?
+  currentMargin       Float?
+  competitiveRating   String? // safe_d, likely_d, lean_d, tossup, lean_r, likely_r, safe_r
+  importanceScore     Float?
+  electoralVotes      Int?
+
+  // Metadata
+  description         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  candidates          Candidate[]
+  polls               Poll[]
+  forecasts           Forecast[]
+  predictions         Prediction[]
+
+  @@index([slug])
+  @@index([raceType])
+  @@index([state])
+  @@index([status])
+  @@index([electionDate])
+}
+
+model Candidate {
+  id         String  @id @default(uuid())
+  raceId     String
+  name       String
+  party      String // D, R, I, L, G, Other
+  incumbent  Boolean @default(false)
+  imageUrl   String?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  race       Race    @relation(fields: [raceId], references: [id], onDelete: Cascade)
+
+  @@index([raceId])
+  @@index([party])
+}
+
+model Pollster {
+  id                  String    @id @default(uuid())
+  name                String
+  slug                String    @unique
+  organization        String?
+  website             String?
+
+  // Quality metrics
+  overallAccuracy     Float?
+  methodologyGrade    String? // A+, A, A-, B+, etc.
+  transparencyScore   Float?
+  sampleSizeAvg       Int?
+  partisanLean        String?
+  houseEffect         Json?
+
+  // Stats
+  pollCount           Int       @default(0)
+  firstPollDate       DateTime?
+  lastPollDate        DateTime?
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relations
+  polls               Poll[]
+
+  @@index([slug])
+  @@index([overallAccuracy])
+}
+
+model Poll {
+  id                   String    @id @default(uuid())
+  raceId               String
+  pollsterId           String
+  pollDate             DateTime
+  fieldDateStart       DateTime?
+  fieldDateEnd         DateTime?
+
+  // Sample details
+  sampleSize           Int?
+  methodology          String? // phone, online, ivr, sms, mixed
+  populationType       String? // rv (registered voters), lv (likely voters), a (adults)
+  partisanAffiliation  String?
+
+  // Quality metrics
+  transparencyScore    Float?
+  historicalAccuracy   Float?
+
+  // Results (flexible JSONB)
+  results              Json // { "Candidate Name": percentage }
+  crosstabs            Json?
+
+  // Statistical details
+  marginOfError        Float?
+  confidenceLevel      Float?
+  calculatedWeight     Float?
+
+  // Sources
+  sourceUrl            String?
+  pdfUrl               String?
+  rawData              Json?
+
+  // Flags
+  isPartisan           Boolean  @default(false)
+  isOutlier            Boolean  @default(false)
+  isVerified           Boolean  @default(false)
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  race                 Race     @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  pollster             Pollster @relation(fields: [pollsterId], references: [id], onDelete: Cascade)
+
+  @@index([raceId])
+  @@index([pollsterId])
+  @@index([pollDate])
+  @@index([methodology])
+  @@index([isOutlier])
+}
+
+model Forecast {
+  id                     String   @id @default(uuid())
+  raceId                 String
+  forecastDate           DateTime
+  modelVersion           String
+
+  // Predictions
+  probabilities          Json // { "Candidate Name": probability }
+  predictedMargins       Json // { "Candidate Name": margin }
+  predictedVoteShare     Json // { "Candidate Name": vote share }
+  confidenceIntervals    Json?
+
+  // Model details
+  simulationsRun         Int
+  volatilityIndex        Float?
+  winProbabilityChange   Float?
+
+  // Input stats
+  contributingPolls      Int?
+  pollQualityScore       Float?
+  oldestPollDays         Int?
+  newestPollDays         Int?
+
+  // Electoral college (for presidential)
+  electoralVotesExpected Json?
+
+  notes                  String?
+  createdAt              DateTime @default(now())
+
+  // Relations
+  race                   Race     @relation(fields: [raceId], references: [id], onDelete: Cascade)
+
+  @@index([raceId])
+  @@index([forecastDate])
+  @@index([modelVersion])
+}
+
+model Prediction {
+  id                String    @id @default(uuid())
+  userId            String
+  raceId            String
+
+  predictedWinner   String
+  predictedMargin   Float?
+  predictedVoteShare Json?
+  confidenceLevel   Float?
+
+  // Gamification
+  pointsWagered     Int       @default(0)
+  isCorrect         Boolean?
+  pointsWon         Int?
+
+  predictedAt       DateTime  @default(now())
+  lockedAt          DateTime?
+  resolvedAt        DateTime?
+
+  // Relations
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  race              Race      @relation(fields: [raceId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([raceId])
+  @@index([predictedAt])
+}
+
+model Scenario {
+  id                     String   @id @default(uuid())
+  userId                 String?
+  title                  String
+  description            String?
+
+  // Scenario data
+  pollAdjustments        Json // Adjustments to poll data
+  electoralCollegeResult Json?
+  senateResult           Json?
+  houseResult            Json?
+
+  // Engagement
+  views                  Int      @default(0)
+  likes                  Int      @default(0)
+  shares                 Int      @default(0)
+
+  isPublic               Boolean  @default(false)
+  isFeatured             Boolean  @default(false)
+
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  // Relations
+  user                   User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([isPublic])
+  @@index([isFeatured])
+}
+
+// ============================================================================
+// System & Analytics
+// ============================================================================
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  name        String
+  key         String    @unique // Hashed
+  userId      String?
+
+  permissions Json      @default("[]") // Array of allowed endpoints/actions
+  rateLimit   Int       @default(100)
+
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([key])
+  @@index([userId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String // create, update, delete, login, etc.
+  entity     String // user, poll, race, etc.
+  entityId   String?
+  changes    Json? // Old and new values
+  metadata   Json? // Request info, IP, etc.
+
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+}

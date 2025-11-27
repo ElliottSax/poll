@@ -1,7 +1,9 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 import { prisma } from '../utils/prisma'
 import { cache } from '../utils/redis'
+import { ValidationError } from '../middleware/errorHandler'
 
 const getPollsQuerySchema = z.object({
   raceId: z.string().uuid().optional(),
@@ -39,15 +41,17 @@ export async function pollsRoutes(
       try {
         const query = getPollsQuerySchema.parse(request.query)
 
-        // Build where clause
-        const where: any = {}
-        if (query.raceId) where.raceId = query.raceId
-        if (query.pollsterId) where.pollsterId = query.pollsterId
-        if (query.methodology) where.methodology = query.methodology
-        if (query.startDate || query.endDate) {
-          where.pollDate = {}
-          if (query.startDate) where.pollDate.gte = new Date(query.startDate)
-          if (query.endDate) where.pollDate.lte = new Date(query.endDate)
+        // Build where clause with proper types
+        const where: Prisma.PollWhereInput = {
+          ...(query.raceId && { raceId: query.raceId }),
+          ...(query.pollsterId && { pollsterId: query.pollsterId }),
+          ...(query.methodology && { methodology: query.methodology }),
+          ...((query.startDate || query.endDate) && {
+            pollDate: {
+              ...(query.startDate && { gte: new Date(query.startDate) }),
+              ...(query.endDate && { lte: new Date(query.endDate) }),
+            },
+          }),
         }
 
         // Try cache first
@@ -103,8 +107,10 @@ export async function pollsRoutes(
 
         return reply.send(response)
       } catch (error) {
-        fastify.log.error(error)
-        return reply.code(500).send({ error: 'Internal server error' })
+        if (error instanceof z.ZodError) {
+          throw new ValidationError(error.errors.map(e => e.message).join(', '))
+        }
+        throw error
       }
     },
   })
@@ -123,36 +129,31 @@ export async function pollsRoutes(
       },
     },
     handler: async (request, reply) => {
-      try {
-        const { id } = request.params as { id: string }
+      const { id } = request.params as { id: string }
 
-        // Try cache first
-        const cacheKey = `poll:${id}`
-        const cached = await cache.get(cacheKey)
-        if (cached) {
-          return reply.send(cached)
-        }
-
-        const poll = await prisma.poll.findUnique({
-          where: { id },
-          include: {
-            race: true,
-            pollster: true,
-          },
-        })
-
-        if (!poll) {
-          return reply.code(404).send({ error: 'Poll not found' })
-        }
-
-        // Cache for 10 minutes
-        await cache.set(cacheKey, poll, 600)
-
-        return reply.send(poll)
-      } catch (error) {
-        fastify.log.error(error)
-        return reply.code(500).send({ error: 'Internal server error' })
+      // Try cache first
+      const cacheKey = `poll:${id}`
+      const cached = await cache.get(cacheKey)
+      if (cached) {
+        return reply.send(cached)
       }
+
+      const poll = await prisma.poll.findUnique({
+        where: { id },
+        include: {
+          race: true,
+          pollster: true,
+        },
+      })
+
+      if (!poll) {
+        return reply.code(404).send({ error: 'Poll not found' })
+      }
+
+      // Cache for 10 minutes
+      await cache.set(cacheKey, poll, 600)
+
+      return reply.send(poll)
     },
   })
 
@@ -170,40 +171,35 @@ export async function pollsRoutes(
       },
     },
     handler: async (request, reply) => {
-      try {
-        const { raceId } = request.params as { raceId: string }
-        const { limit = 50 } = request.query as { limit?: number }
+      const { raceId } = request.params as { raceId: string }
+      const { limit = 50 } = request.query as { limit?: number }
 
-        // Try cache first
-        const cacheKey = `polls:race:${raceId}:${limit}`
-        const cached = await cache.get(cacheKey)
-        if (cached) {
-          return reply.send(cached)
-        }
+      // Try cache first
+      const cacheKey = `polls:race:${raceId}:${limit}`
+      const cached = await cache.get(cacheKey)
+      if (cached) {
+        return reply.send(cached)
+      }
 
-        const polls = await prisma.poll.findMany({
-          where: { raceId },
-          take: limit,
-          orderBy: { pollDate: 'desc' },
-          include: {
-            pollster: {
-              select: {
-                name: true,
-                slug: true,
-                methodologyGrade: true,
-              },
+      const polls = await prisma.poll.findMany({
+        where: { raceId },
+        take: limit,
+        orderBy: { pollDate: 'desc' },
+        include: {
+          pollster: {
+            select: {
+              name: true,
+              slug: true,
+              methodologyGrade: true,
             },
           },
-        })
+        },
+      })
 
-        // Cache for 5 minutes
-        await cache.set(cacheKey, polls, 300)
+      // Cache for 5 minutes
+      await cache.set(cacheKey, polls, 300)
 
-        return reply.send(polls)
-      } catch (error) {
-        fastify.log.error(error)
-        return reply.code(500).send({ error: 'Internal server error' })
-      }
+      return reply.send(polls)
     },
   })
 
@@ -220,46 +216,41 @@ export async function pollsRoutes(
       },
     },
     handler: async (request, reply) => {
-      try {
-        const { limit = 10 } = request.query as { limit?: number }
+      const { limit = 10 } = request.query as { limit?: number }
 
-        // Try cache first
-        const cacheKey = `polls:recent:${limit}`
-        const cached = await cache.get(cacheKey)
-        if (cached) {
-          return reply.send(cached)
-        }
+      // Try cache first
+      const cacheKey = `polls:recent:${limit}`
+      const cached = await cache.get(cacheKey)
+      if (cached) {
+        return reply.send(cached)
+      }
 
-        const polls = await prisma.poll.findMany({
-          take: limit,
-          orderBy: { createdAt: 'desc' },
-          include: {
-            race: {
-              select: {
-                slug: true,
-                raceName: true,
-                raceType: true,
-                state: true,
-              },
-            },
-            pollster: {
-              select: {
-                name: true,
-                slug: true,
-                methodologyGrade: true,
-              },
+      const polls = await prisma.poll.findMany({
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          race: {
+            select: {
+              slug: true,
+              raceName: true,
+              raceType: true,
+              state: true,
             },
           },
-        })
+          pollster: {
+            select: {
+              name: true,
+              slug: true,
+              methodologyGrade: true,
+            },
+          },
+        },
+      })
 
-        // Cache for 2 minutes
-        await cache.set(cacheKey, polls, 120)
+      // Cache for 2 minutes
+      await cache.set(cacheKey, polls, 120)
 
-        return reply.send(polls)
-      } catch (error) {
-        fastify.log.error(error)
-        return reply.code(500).send({ error: 'Internal server error' })
-      }
+      return reply.send(polls)
     },
   })
 }

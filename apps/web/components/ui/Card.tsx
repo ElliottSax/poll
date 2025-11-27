@@ -5,14 +5,26 @@ interface CardProps {
   className?: string
   hover?: boolean
   onClick?: () => void
+  variant?: 'default' | 'glass' | 'premium' | 'gradient'
 }
 
-export function Card({ children, className = '', hover = false, onClick }: CardProps) {
-  const hoverClass = hover ? 'hover:border-primary hover:shadow-md transition-all cursor-pointer' : ''
+export function Card({ children, className = '', hover = false, onClick, variant = 'default' }: CardProps) {
+  const baseClass = 'rounded-xl transition-all duration-300'
+
+  const variantClasses = {
+    default: 'bg-card border border-border',
+    glass: 'glass border-gradient',
+    premium: 'bg-card border border-border shadow-premium',
+    gradient: 'bg-gradient-to-br from-card via-card to-accent/5 border border-border/50 shadow-premium'
+  }
+
+  const hoverClass = hover
+    ? 'hover-lift cursor-pointer hover:border-primary/50 hover:shadow-glow'
+    : ''
 
   return (
     <div
-      className={`bg-card border border-border rounded-lg ${hoverClass} ${className}`}
+      className={`${baseClass} ${variantClasses[variant]} ${hoverClass} ${className}`}
       onClick={onClick}
     >
       {children}

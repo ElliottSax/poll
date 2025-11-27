@@ -1,5 +1,7 @@
-import axios from 'axios'
+import axios, { AxiosInstance } from 'axios'
 import * as cheerio from 'cheerio'
+import { logger } from '../utils/logger'
+import { DateParser } from '../utils/dateParser'
 
 export interface ScrapedPoll {
   pollster: string
@@ -11,18 +13,111 @@ export interface ScrapedPoll {
   sourceUrl: string
 }
 
+interface RateLimitConfig {
+  maxRequests: number
+  timeWindow: number // in milliseconds
+}
+
 export class PollScraper {
   private userAgent = 'PollingDashboard Bot/1.0 (+https://pollingdashboard.com/bot)'
+  private axiosInstance: AxiosInstance
+  private requestTimestamps: Map<string, number[]> = new Map()
+  private rateLimitConfig: RateLimitConfig = {
+    maxRequests: 10,
+    timeWindow: 60000, // 10 requests per minute
+  }
+
+  constructor() {
+    this.axiosInstance = axios.create({
+      timeout: 15000,
+      headers: {
+        'User-Agent': this.userAgent,
+      },
+      maxRedirects: 5,
+    })
+
+    // Response interceptor for handling rate limits
+    this.axiosInstance.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        if (error.response?.status === 429) {
+          const retryAfter = parseInt(error.response.headers['retry-after'] || '60')
+          logger.warn({ retryAfter }, 'Rate limited by external service')
+
+          // Wait and retry once
+          await this.sleep(retryAfter * 1000)
+          return this.axiosInstance.request(error.config)
+        }
+        return Promise.reject(error)
+      }
+    )
+  }
+
+  /**
+   * Sleep helper for rate limiting
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  /**
+   * Check and enforce rate limiting
+   */
+  private async enforceRateLimit(domain: string): Promise<void> {
+    const now = Date.now()
+    const timestamps = this.requestTimestamps.get(domain) || []
+
+    // Remove old timestamps outside the time window
+    const validTimestamps = timestamps.filter(
+      (ts) => now - ts < this.rateLimitConfig.timeWindow
+    )
+
+    // Check if we've exceeded the rate limit
+    if (validTimestamps.length >= this.rateLimitConfig.maxRequests) {
+      const oldestTimestamp = validTimestamps[0]
+      const waitTime = this.rateLimitConfig.timeWindow - (now - oldestTimestamp)
+
+      logger.info({ domain, waitTime }, 'Rate limit reached, waiting')
+      await this.sleep(waitTime)
+    }
+
+    // Add current request timestamp
+    validTimestamps.push(now)
+    this.requestTimestamps.set(domain, validTimestamps)
+  }
+
+  /**
+   * Safe HTTP request with rate limiting and retries
+   */
+  private async safeRequest(url: string, retries = 3): Promise<any> {
+    const domain = new URL(url).hostname
+
+    await this.enforceRateLimit(domain)
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const response = await this.axiosInstance.get(url)
+        return response
+      } catch (error: any) {
+        logger.error({ error, url, attempt }, 'Request failed')
+
+        if (attempt === retries) {
+          throw error
+        }
+
+        // Exponential backoff
+        const backoff = Math.min(1000 * Math.pow(2, attempt - 1), 10000)
+        await this.sleep(backoff)
+      }
+    }
+  }
 
   /**
    * Scrape RealClearPolitics
    */
   async scrapeRCP(raceUrl: string): Promise<ScrapedPoll[]> {
     try {
-      const response = await axios.get(raceUrl, {
-        headers: { 'User-Agent': this.userAgent },
-        timeout: 10000,
-      })
+      const response = await this.safeRequest(raceUrl)
 
       const $ = cheerio.load(response.data)
       const polls: ScrapedPoll[] = []
@@ -62,14 +157,15 @@ export class PollScraper {
 
           polls.push(poll)
         } catch (err) {
-          console.error('Error parsing RCP row:', err)
+          logger.error({ err, row: i }, 'Error parsing RCP row')
         }
       })
 
+      logger.info({ url: raceUrl, pollsFound: polls.length }, 'RCP scrape completed')
       return polls
     } catch (error) {
-      console.error('Error scraping RCP:', error)
-      return []
+      logger.error({ error, url: raceUrl }, 'Error scraping RCP')
+      throw error
     }
   }
 
@@ -80,10 +176,7 @@ export class PollScraper {
     // FiveThirtyEight uses a JSON API
     try {
       const apiUrl = `https://projects.fivethirtyeight.com/polls/data/${raceSlug}.json`
-      const response = await axios.get(apiUrl, {
-        headers: { 'User-Agent': this.userAgent },
-        timeout: 10000,
-      })
+      const response = await this.safeRequest(apiUrl)
 
       const polls: ScrapedPoll[] = response.data.map((item: any) => ({
         pollster: item.pollster,
@@ -98,10 +191,11 @@ export class PollScraper {
         sourceUrl: `https://projects.fivethirtyeight.com/polls/${raceSlug}`,
       }))
 
+      logger.info({ raceSlug, pollsFound: polls.length }, '538 scrape completed')
       return polls
     } catch (error) {
-      console.error('Error scraping 538:', error)
-      return []
+      logger.error({ error, raceSlug }, 'Error scraping 538')
+      throw error
     }
   }
 
@@ -123,25 +217,8 @@ export class PollScraper {
    * Parse date string to ISO format
    */
   parseDate(dateStr: string): string {
-    // Handle various date formats
-    // "1/14 - 1/17" -> take end date
-    // "Jan 14-17" -> take end date
-    // etc.
-
-    try {
-      const parts = dateStr.split('-')
-      const endDate = parts[parts.length - 1].trim()
-
-      // Basic parsing - would need more robust implementation
-      const date = new Date(endDate)
-      if (!isNaN(date.getTime())) {
-        return date.toISOString().split('T')[0]
-      }
-    } catch (err) {
-      console.error('Error parsing date:', dateStr)
-    }
-
-    return new Date().toISOString().split('T')[0]
+    const parsed = DateParser.parsePollDate(dateStr)
+    return parsed || new Date().toISOString().split('T')[0]
   }
 
   /**

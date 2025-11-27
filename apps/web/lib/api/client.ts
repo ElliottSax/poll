@@ -3,7 +3,8 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 class ApiClient {
   private client: AxiosInstance
 
-  constructor(baseURL: string = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') {
+  constructor(baseURL: string = '/api') {
+    // Use Next.js API routes as proxy to avoid exposing API keys
     this.client = axios.create({
       baseURL,
       timeout: 10000,
@@ -11,19 +12,6 @@ class ApiClient {
         'Content-Type': 'application/json',
       },
     })
-
-    // Request interceptor
-    this.client.interceptors.request.use(
-      (config) => {
-        // Add API key if available
-        const apiKey = process.env.NEXT_PUBLIC_API_KEY
-        if (apiKey) {
-          config.headers['X-API-Key'] = apiKey
-        }
-        return config
-      },
-      (error) => Promise.reject(error)
-    )
 
     // Response interceptor
     this.client.interceptors.response.use(
@@ -67,7 +55,7 @@ class ApiClient {
   }) {
     return this.request({
       method: 'GET',
-      url: '/api/races',
+      url: '/races',
       params,
     })
   }
@@ -75,7 +63,7 @@ class ApiClient {
   async getRace(slug: string) {
     return this.request({
       method: 'GET',
-      url: `/api/races/${slug}`,
+      url: `/races/${slug}`,
     })
   }
 
@@ -90,7 +78,7 @@ class ApiClient {
   }) {
     return this.request({
       method: 'GET',
-      url: '/api/polls',
+      url: '/polls',
       params,
     })
   }
@@ -98,14 +86,14 @@ class ApiClient {
   async getPoll(id: string) {
     return this.request({
       method: 'GET',
-      url: `/api/polls/${id}`,
+      url: `/polls/${id}`,
     })
   }
 
   async getRacePolls(raceId: string, limit?: number) {
     return this.request({
       method: 'GET',
-      url: `/api/polls/race/${raceId}`,
+      url: `/polls/race/${raceId}`,
       params: { limit },
     })
   }
@@ -113,7 +101,7 @@ class ApiClient {
   async getRecentPolls(limit?: number) {
     return this.request({
       method: 'GET',
-      url: '/api/polls/recent',
+      url: '/polls/recent',
       params: { limit },
     })
   }

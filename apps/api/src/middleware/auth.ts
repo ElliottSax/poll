@@ -1,9 +1,21 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
+import jwt from 'jsonwebtoken'
+import { config } from '../config/env'
+import { prisma } from '../utils/prisma'
+import { UnauthorizedError, ForbiddenError } from './errorHandler'
 
 export interface AuthUser {
   id: string
   email: string
   role: 'user' | 'admin' | 'moderator'
+}
+
+export interface JWTPayload {
+  userId: string
+  email: string
+  role: 'user' | 'admin' | 'moderator'
+  iat?: number
+  exp?: number
 }
 
 declare module 'fastify' {
@@ -14,27 +26,21 @@ declare module 'fastify' {
 
 /**
  * Middleware to verify API key authentication
+ * Used for system-to-system authentication
  */
 export async function verifyApiKey(request: FastifyRequest, reply: FastifyReply) {
   const apiKey = request.headers['x-api-key'] as string
 
   if (!apiKey) {
-    return reply.code(401).send({
-      error: 'Unauthorized',
-      message: 'API key is required',
-    })
+    throw new UnauthorizedError('API key is required')
   }
 
-  // TODO: Verify API key against database
-  // For now, just check if it exists
-  if (apiKey !== process.env.API_KEY) {
-    return reply.code(401).send({
-      error: 'Unauthorized',
-      message: 'Invalid API key',
-    })
+  // Verify API key against configured secret
+  if (apiKey !== config.apiSecret) {
+    throw new UnauthorizedError('Invalid API key')
   }
 
-  // TODO: Attach user to request
+  // Attach system user to request
   request.user = {
     id: 'system',
     email: 'api@pollingdashboard.com',
@@ -44,39 +50,54 @@ export async function verifyApiKey(request: FastifyRequest, reply: FastifyReply)
 
 /**
  * Middleware to verify JWT authentication
+ * Used for user authentication
  */
 export async function verifyJWT(request: FastifyRequest, reply: FastifyReply) {
   const authHeader = request.headers.authorization
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return reply.code(401).send({
-      error: 'Unauthorized',
-      message: 'Bearer token is required',
-    })
+    throw new UnauthorizedError('Bearer token is required')
   }
 
   const token = authHeader.substring(7)
 
   try {
-    // TODO: Verify JWT token
-    // For now, just validate format
-    if (!token || token.length < 10) {
-      throw new Error('Invalid token format')
+    // Verify and decode JWT token
+    const decoded = jwt.verify(token, config.jwtSecret) as JWTPayload
+
+    // Optionally verify user still exists and is active
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        isBanned: true,
+      },
+    })
+
+    if (!user) {
+      throw new UnauthorizedError('User not found')
     }
 
-    // TODO: Decode and validate token
-    // const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    if (user.isBanned) {
+      throw new ForbiddenError('User account is banned')
+    }
 
+    // Attach user to request
     request.user = {
-      id: 'user-123',
-      email: 'user@example.com',
-      role: 'user',
+      id: user.id,
+      email: user.email,
+      role: user.role as 'user' | 'admin' | 'moderator',
     }
   } catch (error) {
-    return reply.code(401).send({
-      error: 'Unauthorized',
-      message: 'Invalid or expired token',
-    })
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new UnauthorizedError('Token expired')
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      throw new UnauthorizedError('Invalid token')
+    }
+    throw error
   }
 }
 
@@ -85,17 +106,11 @@ export async function verifyJWT(request: FastifyRequest, reply: FastifyReply) {
  */
 export async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
   if (!request.user) {
-    return reply.code(401).send({
-      error: 'Unauthorized',
-      message: 'Authentication required',
-    })
+    throw new UnauthorizedError('Authentication required')
   }
 
   if (request.user.role !== 'admin') {
-    return reply.code(403).send({
-      error: 'Forbidden',
-      message: 'Admin access required',
-    })
+    throw new ForbiddenError('Admin access required')
   }
 }
 
@@ -104,16 +119,37 @@ export async function requireAdmin(request: FastifyRequest, reply: FastifyReply)
  */
 export async function requireModerator(request: FastifyRequest, reply: FastifyReply) {
   if (!request.user) {
-    return reply.code(401).send({
-      error: 'Unauthorized',
-      message: 'Authentication required',
-    })
+    throw new UnauthorizedError('Authentication required')
   }
 
   if (request.user.role !== 'admin' && request.user.role !== 'moderator') {
-    return reply.code(403).send({
-      error: 'Forbidden',
-      message: 'Moderator or admin access required',
-    })
+    throw new ForbiddenError('Moderator or admin access required')
+  }
+}
+
+/**
+ * Generate JWT token for a user
+ */
+export function generateToken(user: { id: string; email: string; role: string }): string {
+  const payload: JWTPayload = {
+    userId: user.id,
+    email: user.email,
+    role: user.role as 'user' | 'admin' | 'moderator',
+  }
+
+  return jwt.sign(payload, config.jwtSecret, {
+    expiresIn: config.jwtExpiresIn,
+    issuer: 'polling-dashboard-api',
+  })
+}
+
+/**
+ * Verify and decode JWT token without throwing
+ */
+export function verifyToken(token: string): JWTPayload | null {
+  try {
+    return jwt.verify(token, config.jwtSecret) as JWTPayload
+  } catch {
+    return null
   }
 }

@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import { prisma } from '../utils/prisma'
 import { redis } from '../utils/redis'
+import { metrics, getSystemMetrics } from '../utils/metrics'
 
 export async function healthRoutes(
   fastify: FastifyInstance,
@@ -83,6 +84,56 @@ export async function healthRoutes(
         database: databaseStatus,
         redis: redisStatus,
         memory,
+      })
+    },
+  })
+
+  // Metrics endpoint
+  fastify.get('/metrics', {
+    schema: {
+      description: 'Application metrics and performance data',
+      tags: ['health'],
+    },
+    handler: async (_request, reply) => {
+      const systemMetrics = getSystemMetrics()
+
+      // Get key application metrics
+      const apiRequestCount = metrics.getSummary('api.request.count')
+      const apiDuration = metrics.getSummary('api.request.duration')
+      const cacheHitRate = metrics.getLatest('cache.hit_rate')
+      const dbQueryCount = metrics.getSummary('database.query.count')
+      const errors5xx = metrics.getLatest('api.errors.5xx')
+      const errors4xx = metrics.getLatest('api.errors.4xx')
+      const wsActive = metrics.getLatest('websocket.active')
+
+      return reply.send({
+        timestamp: new Date().toISOString(),
+        system: {
+          uptime: systemMetrics.uptime,
+          memory: {
+            rss: `${Math.round(systemMetrics.memory.rss / 1024 / 1024)}MB`,
+            heapUsed: `${Math.round(systemMetrics.memory.heapUsed / 1024 / 1024)}MB`,
+            heapTotal: `${Math.round(systemMetrics.memory.heapTotal / 1024 / 1024)}MB`,
+            heapUsedPercentage: `${systemMetrics.memory.heapUsedPercentage.toFixed(2)}%`,
+          },
+        },
+        api: {
+          requests: apiRequestCount,
+          averageDuration: apiDuration?.avg ? `${apiDuration.avg.toFixed(2)}ms` : null,
+          errors: {
+            '4xx': errors4xx?.value || 0,
+            '5xx': errors5xx?.value || 0,
+          },
+        },
+        cache: {
+          hitRate: cacheHitRate ? `${cacheHitRate.value.toFixed(2)}%` : null,
+        },
+        database: {
+          queries: dbQueryCount,
+        },
+        websocket: {
+          activeConnections: wsActive?.value || 0,
+        },
       })
     },
   })
