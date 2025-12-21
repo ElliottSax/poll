@@ -3,7 +3,8 @@ name: Security Checks
 on:
   pull_request:
   push:
-    branches: [main, develop]
+    branches: [main, develop, 'claude/**']
+  workflow_dispatch:  # Allow manual triggering
   schedule:
     # Run daily at 2 AM UTC
     - cron: '0 2 * * *'
