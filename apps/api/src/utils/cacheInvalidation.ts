@@ -112,8 +112,8 @@ export function InvalidateCache(
   cacheType: 'polls' | 'races' | 'pollsters' | 'forecasts'
 ) {
   return function (
-    target: any,
-    propertyKey: string,
+    _target: unknown,
+    _propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
     const originalMethod = descriptor.value

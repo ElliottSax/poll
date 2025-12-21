@@ -28,7 +28,7 @@ declare module 'fastify' {
  * Middleware to verify API key authentication
  * Used for system-to-system authentication
  */
-export async function verifyApiKey(request: FastifyRequest, reply: FastifyReply) {
+export async function verifyApiKey(request: FastifyRequest, _reply: FastifyReply) {
   const apiKey = request.headers['x-api-key'] as string
 
   if (!apiKey) {
@@ -52,7 +52,7 @@ export async function verifyApiKey(request: FastifyRequest, reply: FastifyReply)
  * Middleware to verify JWT authentication
  * Used for user authentication
  */
-export async function verifyJWT(request: FastifyRequest, reply: FastifyReply) {
+export async function verifyJWT(request: FastifyRequest, _reply: FastifyReply) {
   const authHeader = request.headers.authorization
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -104,7 +104,7 @@ export async function verifyJWT(request: FastifyRequest, reply: FastifyReply) {
 /**
  * Middleware to check if user is admin
  */
-export async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
+export async function requireAdmin(request: FastifyRequest, _reply: FastifyReply) {
   if (!request.user) {
     throw new UnauthorizedError('Authentication required')
   }
@@ -117,7 +117,7 @@ export async function requireAdmin(request: FastifyRequest, reply: FastifyReply)
 /**
  * Middleware to check if user is moderator or admin
  */
-export async function requireModerator(request: FastifyRequest, reply: FastifyReply) {
+export async function requireModerator(request: FastifyRequest, _reply: FastifyReply) {
   if (!request.user) {
     throw new UnauthorizedError('Authentication required')
   }
@@ -138,7 +138,7 @@ export function generateToken(user: { id: string; email: string; role: string })
   }
 
   return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn,
+    expiresIn: config.jwtExpiresIn as jwt.SignOptions['expiresIn'],
     issuer: 'polling-dashboard-api',
   })
 }

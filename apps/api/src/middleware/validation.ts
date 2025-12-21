@@ -17,7 +17,7 @@ export interface ValidationOptions {
  * Create a validation middleware for Fastify routes
  */
 export function validate(options: ValidationOptions) {
-  return async (request: FastifyRequest, reply: FastifyReply) => {
+  return async (request: FastifyRequest, _reply: FastifyReply) => {
     try {
       // Validate query parameters
       if (options.query) {

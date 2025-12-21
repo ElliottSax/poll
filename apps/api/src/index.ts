@@ -6,7 +6,6 @@ import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
 import websocket from '@fastify/websocket'
 import { config } from './config/env'
-import { logger } from './utils/logger'
 import { prisma } from './utils/prisma'
 import { redis } from './utils/redis'
 
@@ -24,9 +23,23 @@ import { healthRoutes } from './routes/health'
 // Import services
 import { initializeWebSocketService, WebSocketService } from './services/websocket'
 
-// Create Fastify instance
+// Create Fastify instance with inline logger config
 const fastify = Fastify({
-  logger: logger,
+  logger: config.isDevelopment
+    ? {
+        level: config.logLevel,
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'HH:MM:ss Z',
+            ignore: 'pid,hostname',
+          },
+        },
+      }
+    : {
+        level: config.logLevel,
+      },
   requestIdHeader: 'x-request-id',
   requestIdLogLabel: 'reqId',
   disableRequestLogging: false,

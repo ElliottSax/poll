@@ -18,7 +18,7 @@ export class WebSocketService {
    * Initialize WebSocket server
    */
   async initialize() {
-    this.fastify.get('/ws', { websocket: true }, (connection, req) => {
+    this.fastify.get('/ws', { websocket: true }, (connection, _req) => {
       const clientId = this.generateClientId()
       const client: Client = {
         ws: connection.socket,
@@ -34,7 +34,7 @@ export class WebSocketService {
           const data = JSON.parse(message.toString())
           this.handleMessage(clientId, data)
         } catch (error) {
-          this.fastify.log.error('Error parsing WebSocket message:', error)
+          this.fastify.log.error({ err: error }, 'Error parsing WebSocket message')
         }
       })
 
@@ -127,7 +127,7 @@ export class WebSocketService {
    * Broadcast to all connected clients
    */
   public broadcastToAll(data: any) {
-    this.clients.forEach((client, clientId) => {
+    this.clients.forEach((_client, clientId) => {
       this.send(clientId, {
         ...data,
         timestamp: new Date().toISOString(),
@@ -206,7 +206,7 @@ export class WebSocketService {
         })
       }
     } catch (error) {
-      this.fastify.log.error('Error checking for updates:', error)
+      this.fastify.log.error({ err: error }, 'Error checking for updates')
     }
   }
 

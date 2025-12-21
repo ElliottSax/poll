@@ -12,7 +12,7 @@ export async function forecastsRoutes(
       description: 'Get the current presidential forecast',
       tags: ['forecasts'],
     },
-    handler: async (request, reply) => {
+    handler: async (_request, reply) => {
       try {
         // Try cache first
         const cacheKey = 'forecast:presidential:latest'
@@ -67,7 +67,7 @@ export async function forecastsRoutes(
       description: 'Get the current Senate control forecast',
       tags: ['forecasts'],
     },
-    handler: async (request, reply) => {
+    handler: async (_request, reply) => {
       try {
         // Try cache first
         const cacheKey = 'forecast:senate:latest'
@@ -99,7 +99,7 @@ export async function forecastsRoutes(
             D_control: 0.52,
             R_control: 0.48,
           },
-          races: senateRaces.map((race) => ({
+          races: senateRaces.map((race: typeof senateRaces[number]) => ({
             id: race.id,
             slug: race.slug,
             name: race.raceName,
@@ -125,7 +125,7 @@ export async function forecastsRoutes(
       description: 'Get the current House control forecast',
       tags: ['forecasts'],
     },
-    handler: async (request, reply) => {
+    handler: async (_request, reply) => {
       try {
         // Try cache first
         const cacheKey = 'forecast:house:latest'
@@ -163,7 +163,7 @@ export async function forecastsRoutes(
             R_control: 0.58,
           },
           competitiveRaces: houseRaces.length,
-          races: houseRaces.slice(0, 20).map((race) => ({
+          races: houseRaces.slice(0, 20).map((race: typeof houseRaces[number]) => ({
             id: race.id,
             slug: race.slug,
             name: race.raceName,

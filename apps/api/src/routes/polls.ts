@@ -1,6 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import { z } from 'zod'
-import { Prisma } from '@prisma/client'
 import { prisma } from '../utils/prisma'
 import { cache } from '../utils/redis'
 import { ValidationError } from '../middleware/errorHandler'
@@ -41,8 +40,8 @@ export async function pollsRoutes(
       try {
         const query = getPollsQuerySchema.parse(request.query)
 
-        // Build where clause with proper types
-        const where: Prisma.PollWhereInput = {
+        // Build where clause
+        const where = {
           ...(query.raceId && { raceId: query.raceId }),
           ...(query.pollsterId && { pollsterId: query.pollsterId }),
           ...(query.methodology && { methodology: query.methodology }),

@@ -23,7 +23,7 @@ export interface RequestLog {
 /**
  * Hook to log incoming requests
  */
-export async function logRequest(request: FastifyRequest, reply: FastifyReply) {
+export async function logRequest(request: FastifyRequest, _reply: FastifyReply) {
   const startTime = Date.now()
 
   // Store start time for response logging

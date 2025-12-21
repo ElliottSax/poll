@@ -32,13 +32,13 @@ export const prisma = globalThis.prisma ?? prismaClientSingleton()
 
 // Log queries in development
 if (process.env.NODE_ENV === 'development') {
-  prisma.$on('query', (e) => {
+  prisma.$on('query', (e: { duration: number; query: string }) => {
     logger.debug({ duration: e.duration, query: e.query }, 'Database query')
   })
 }
 
-prisma.$on('error', (e) => {
-  logger.error(e, 'Database error')
+prisma.$on('error', (e: { message: string }) => {
+  logger.error({ err: e }, 'Database error')
 })
 
 if (process.env.NODE_ENV !== 'production') {
