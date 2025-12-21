@@ -16,7 +16,6 @@ export default async function DashboardPage() {
     redirect('/api/auth/signin')
   }
 
-  // TODO: Fetch user's tracked races from API
   const trackedRaces = await getTrackedRaces(session.user.id)
   const recentAlerts = await getRecentAlerts(session.user.id)
 
@@ -274,47 +273,39 @@ function QuickActionButton({ href, icon, text }: { href: string; icon: string; t
   )
 }
 
-// Mock data fetching functions
+// Data fetching functions
 async function getTrackedRaces(userId: string) {
-  // TODO: Fetch from API
-  return [
-    {
-      id: '1',
-      slug: 'pa-senate-2024',
-      raceName: '2024 Pennsylvania Senate',
-      state: 'Pennsylvania',
-      rating: 'Lean D',
-      lastUpdated: new Date().toISOString(),
-      candidates: [
-        { name: 'Bob Casey', party: 'D', polling: 51 },
-        { name: 'Dave McCormick', party: 'R', polling: 47 },
-      ],
-    },
-    {
-      id: '2',
-      slug: 'presidential-2024',
-      raceName: '2024 Presidential Election',
-      state: 'National',
-      rating: 'Toss-up',
-      lastUpdated: new Date().toISOString(),
-      candidates: [
-        { name: 'Kamala Harris', party: 'D', polling: 49 },
-        { name: 'Donald Trump', party: 'R', polling: 48 },
-      ],
-    },
-  ]
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}/tracked-races`, {
+      next: { revalidate: 60 },
+    })
+    if (!res.ok) {
+      // Fallback: fetch all active races if user endpoint not available
+      const racesRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/races?status=active&limit=5`, {
+        next: { revalidate: 60 },
+      })
+      if (racesRes.ok) {
+        const data = await racesRes.json()
+        return data.data || []
+      }
+      return []
+    }
+    return res.json()
+  } catch (error) {
+    console.error('Failed to fetch tracked races:', error)
+    return []
+  }
 }
 
 async function getRecentAlerts(userId: string) {
-  // TODO: Fetch from API
-  return [
-    {
-      title: 'Rating Changed',
-      description: 'Arizona Senate moved to Toss-up',
-    },
-    {
-      title: 'New Poll',
-      description: 'Quinnipiac poll for GA Senate',
-    },
-  ]
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}/alerts`, {
+      next: { revalidate: 60 },
+    })
+    if (!res.ok) return []
+    return res.json()
+  } catch (error) {
+    console.error('Failed to fetch alerts:', error)
+    return []
+  }
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
@@ -8,12 +8,47 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Modal, ModalFooter } from '@/components/ui/Modal'
 import Link from 'next/link'
 
+interface Pollster {
+  id: string
+  name: string
+  slug: string
+  methodologyGrade: string
+  overallAccuracy: number | null
+  pollCount: number
+  sampleSizeAvg: number | null
+  lastPollDate: string | null
+}
+
 export default function AdminPollstersPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [pollsters, setPollsters] = useState<Pollster[]>([])
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({ total: 0, aGrade: 0, bGrade: 0, cGrade: 0 })
 
-  // TODO: Fetch pollsters from API
-  const pollsters = getMockPollsters()
+  useEffect(() => {
+    async function fetchPollsters() {
+      try {
+        const res = await fetch('/api/pollsters?limit=100')
+        if (res.ok) {
+          const data = await res.json()
+          const list = data.data || []
+          setPollsters(list)
+          setStats({
+            total: list.length,
+            aGrade: list.filter((p: Pollster) => p.methodologyGrade?.startsWith('A')).length,
+            bGrade: list.filter((p: Pollster) => p.methodologyGrade?.startsWith('B')).length,
+            cGrade: list.filter((p: Pollster) => !p.methodologyGrade?.startsWith('A') && !p.methodologyGrade?.startsWith('B')).length,
+          })
+        }
+      } catch (error) {
+        console.error('Failed to fetch pollsters:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchPollsters()
+  }, [])
 
   const filteredPollsters = pollsters.filter((pollster) =>
     pollster.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -66,25 +101,25 @@ export default function AdminPollstersPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">156</div>
+            <div className="text-2xl font-bold">{loading ? '...' : stats.total}</div>
             <div className="text-sm text-muted-foreground">Total Pollsters</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">42</div>
+            <div className="text-2xl font-bold text-green-600">{loading ? '...' : stats.aGrade}</div>
             <div className="text-sm text-muted-foreground">A-Grade</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">68</div>
+            <div className="text-2xl font-bold text-blue-600">{loading ? '...' : stats.bGrade}</div>
             <div className="text-sm text-muted-foreground">B-Grade</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-yellow-600">46</div>
+            <div className="text-2xl font-bold text-yellow-600">{loading ? '...' : stats.cGrade}</div>
             <div className="text-sm text-muted-foreground">C-Grade or Lower</div>
           </CardContent>
         </Card>
@@ -185,8 +220,9 @@ export default function AdminPollstersPage() {
   )
 }
 
-function PollsterCard({ pollster }: { pollster: any }) {
-  const getGradeColor = (grade: string) => {
+function PollsterCard({ pollster }: { pollster: Pollster }) {
+  const getGradeColor = (grade: string | null) => {
+    if (!grade) return 'secondary'
     const letter = grade.charAt(0)
     if (letter === 'A') return 'success'
     if (letter === 'B') return 'info'
@@ -199,8 +235,8 @@ function PollsterCard({ pollster }: { pollster: any }) {
       <CardHeader>
         <div className="flex items-start justify-between mb-2">
           <CardTitle className="text-lg">{pollster.name}</CardTitle>
-          <Badge variant={getGradeColor(pollster.grade) as any} size="lg">
-            {pollster.grade}
+          <Badge variant={getGradeColor(pollster.methodologyGrade) as any} size="lg">
+            {pollster.methodologyGrade || 'N/A'}
           </Badge>
         </div>
       </CardHeader>
@@ -208,7 +244,7 @@ function PollsterCard({ pollster }: { pollster: any }) {
         <div className="space-y-3 mb-4">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Accuracy:</span>
-            <span className="font-semibold">{pollster.accuracy}%</span>
+            <span className="font-semibold">{pollster.overallAccuracy?.toFixed(1) || 'N/A'}%</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Total Polls:</span>
@@ -216,88 +252,29 @@ function PollsterCard({ pollster }: { pollster: any }) {
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Avg Sample:</span>
-            <span className="font-semibold">{pollster.avgSample.toLocaleString()}</span>
+            <span className="font-semibold">{pollster.sampleSizeAvg?.toLocaleString() || 'N/A'}</span>
           </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Last Poll:</span>
-            <span className="text-xs">{new Date(pollster.lastPoll).toLocaleDateString()}</span>
-          </div>
+          {pollster.lastPollDate && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Last Poll:</span>
+              <span className="text-xs">{new Date(pollster.lastPollDate).toLocaleDateString()}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2">
-          <Button size="sm" variant="primary" className="flex-1">
-            Edit
-          </Button>
-          <Button size="sm" variant="default" className="flex-1">
-            View Details
-          </Button>
+          <Link href={`/admin/pollsters/${pollster.slug}`} className="flex-1">
+            <Button size="sm" variant="primary" className="w-full">
+              Edit
+            </Button>
+          </Link>
+          <Link href={`/pollsters/${pollster.slug}`} className="flex-1">
+            <Button size="sm" variant="default" className="w-full">
+              View Details
+            </Button>
+          </Link>
         </div>
       </CardContent>
     </Card>
   )
-}
-
-function getMockPollsters() {
-  return [
-    {
-      id: '1',
-      name: 'Monmouth University',
-      slug: 'monmouth',
-      grade: 'A+',
-      accuracy: 94.2,
-      pollCount: 187,
-      avgSample: 1247,
-      lastPoll: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '2',
-      name: 'Quinnipiac University',
-      slug: 'quinnipiac',
-      grade: 'A-',
-      accuracy: 91.5,
-      pollCount: 245,
-      avgSample: 1589,
-      lastPoll: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '3',
-      name: 'Emerson College',
-      slug: 'emerson',
-      grade: 'A-',
-      accuracy: 89.3,
-      pollCount: 312,
-      avgSample: 983,
-      lastPoll: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '4',
-      name: 'Marist College',
-      slug: 'marist',
-      grade: 'A',
-      accuracy: 92.1,
-      pollCount: 156,
-      avgSample: 1124,
-      lastPoll: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '5',
-      name: 'Siena College',
-      slug: 'siena',
-      grade: 'B+',
-      accuracy: 88.7,
-      pollCount: 134,
-      avgSample: 892,
-      lastPoll: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '6',
-      name: 'Rasmussen Reports',
-      slug: 'rasmussen',
-      grade: 'C+',
-      accuracy: 79.4,
-      pollCount: 428,
-      avgSample: 750,
-      lastPoll: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-  ]
 }

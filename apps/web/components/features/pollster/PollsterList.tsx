@@ -1,5 +1,3 @@
-'use client'
-
 import Link from 'next/link'
 import { Badge } from '@/components/ui/Badge'
 
@@ -17,25 +15,32 @@ interface PollsterListProps {
   orderBy?: 'accuracy' | 'pollCount' | 'grade' | 'name'
 }
 
-export async function PollsterList({ orderBy = 'accuracy' }: PollsterListProps) {
-  // TODO: Fetch from API
-  const pollsters = await getMockPollsters()
+async function fetchPollsters(orderBy: string): Promise<Pollster[]> {
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/pollsters?orderBy=${orderBy}&limit=50`,
+      { next: { revalidate: 300 } }
+    )
+    if (!res.ok) return []
+    const data = await res.json()
+    return data.data || []
+  } catch (error) {
+    console.error('Failed to fetch pollsters:', error)
+    return []
+  }
+}
 
-  // Sort pollsters based on orderBy
-  const sorted = [...pollsters].sort((a, b) => {
-    switch (orderBy) {
-      case 'accuracy':
-        return b.overallAccuracy - a.overallAccuracy
-      case 'pollCount':
-        return b.pollCount - a.pollCount
-      case 'grade':
-        return (a.methodologyGrade || 'F').localeCompare(b.methodologyGrade || 'F')
-      case 'name':
-        return a.name.localeCompare(b.name)
-      default:
-        return b.overallAccuracy - a.overallAccuracy
-    }
-  })
+export async function PollsterList({ orderBy = 'accuracy' }: PollsterListProps) {
+  // API already sorts by orderBy parameter
+  const pollsters = await fetchPollsters(orderBy)
+
+  if (pollsters.length === 0) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-8 text-center text-muted-foreground">
+        No pollsters available
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -50,7 +55,7 @@ export async function PollsterList({ orderBy = 'accuracy' }: PollsterListProps) 
       </div>
 
       {/* Pollster Rows */}
-      {sorted.map((pollster, index) => (
+      {pollsters.map((pollster, index) => (
         <PollsterRow key={pollster.id} pollster={pollster} rank={index + 1} />
       ))}
     </div>
@@ -119,81 +124,4 @@ function PollsterRow({ pollster, rank }: { pollster: Pollster; rank: number }) {
       </div>
     </Link>
   )
-}
-
-async function getMockPollsters(): Promise<Pollster[]> {
-  return [
-    {
-      id: '1',
-      name: 'Monmouth University',
-      slug: 'monmouth',
-      overallAccuracy: 94.2,
-      methodologyGrade: 'A+',
-      pollCount: 187,
-      lastPollDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '2',
-      name: 'Quinnipiac University',
-      slug: 'quinnipiac',
-      overallAccuracy: 91.5,
-      methodologyGrade: 'A-',
-      pollCount: 245,
-      lastPollDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '3',
-      name: 'Emerson College',
-      slug: 'emerson',
-      overallAccuracy: 89.3,
-      methodologyGrade: 'A-',
-      pollCount: 312,
-      lastPollDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '4',
-      name: 'Marist College',
-      slug: 'marist',
-      overallAccuracy: 92.1,
-      methodologyGrade: 'A',
-      pollCount: 156,
-      lastPollDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '5',
-      name: 'Siena College',
-      slug: 'siena',
-      overallAccuracy: 88.7,
-      methodologyGrade: 'B+',
-      pollCount: 134,
-      lastPollDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '6',
-      name: 'Rasmussen Reports',
-      slug: 'rasmussen',
-      overallAccuracy: 79.4,
-      methodologyGrade: 'C+',
-      pollCount: 428,
-      lastPollDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '7',
-      name: 'SurveyUSA',
-      slug: 'surveyusa',
-      overallAccuracy: 87.2,
-      methodologyGrade: 'B+',
-      pollCount: 289,
-      lastPollDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    },
-    {
-      id: '8',
-      name: 'Morning Consult',
-      slug: 'morning-consult',
-      overallAccuracy: 85.9,
-      methodologyGrade: 'B',
-      pollCount: 512,
-      lastPollDate: new Date().toISOString(),
-    },
-  ]
 }

@@ -1,21 +1,58 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import Link from 'next/link'
 
+interface Race {
+  id: string
+  slug: string
+  raceName: string
+  raceType: string
+  state: string | null
+  status: string
+  electionDate: string
+  competitiveRating: string | null
+  _count?: { polls: number; candidates: number }
+}
+
 export default function AdminRacesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [races, setRaces] = useState<Race[]>([])
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({ total: 0, active: 0, upcoming: 0, completed: 0 })
 
-  // TODO: Fetch races from API
-  const races = getMockRaces()
+  useEffect(() => {
+    async function fetchRaces() {
+      try {
+        const res = await fetch('/api/races?limit=100')
+        if (res.ok) {
+          const data = await res.json()
+          const raceList = data.data || []
+          setRaces(raceList)
+          // Calculate stats
+          setStats({
+            total: raceList.length,
+            active: raceList.filter((r: Race) => r.status === 'active').length,
+            upcoming: raceList.filter((r: Race) => r.status === 'upcoming').length,
+            completed: raceList.filter((r: Race) => r.status === 'completed').length,
+          })
+        }
+      } catch (error) {
+        console.error('Failed to fetch races:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchRaces()
+  }, [])
 
   const filteredRaces = races.filter((race) =>
-    race.name.toLowerCase().includes(searchTerm.toLowerCase())
+    race.raceName.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
@@ -68,25 +105,25 @@ export default function AdminRacesPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">87</div>
+            <div className="text-2xl font-bold">{loading ? '...' : stats.total}</div>
             <div className="text-sm text-muted-foreground">Total Races</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">72</div>
+            <div className="text-2xl font-bold text-green-600">{loading ? '...' : stats.active}</div>
             <div className="text-sm text-muted-foreground">Active</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">12</div>
+            <div className="text-2xl font-bold text-blue-600">{loading ? '...' : stats.upcoming}</div>
             <div className="text-sm text-muted-foreground">Upcoming</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-gray-600">3</div>
+            <div className="text-2xl font-bold text-gray-600">{loading ? '...' : stats.completed}</div>
             <div className="text-sm text-muted-foreground">Completed</div>
           </CardContent>
         </Card>
@@ -105,12 +142,12 @@ export default function AdminRacesPage() {
   )
 }
 
-function RaceCard({ race }: { race: any }) {
+function RaceCard({ race }: { race: Race }) {
   return (
     <Card hover>
       <CardHeader>
         <div className="flex items-start justify-between mb-2">
-          <CardTitle className="text-lg">{race.name}</CardTitle>
+          <CardTitle className="text-lg">{race.raceName}</CardTitle>
           <Badge
             variant={
               race.status === 'active'
@@ -125,7 +162,7 @@ function RaceCard({ race }: { race: any }) {
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          {race.type} • {race.state || 'National'}
+          {race.raceType} • {race.state || 'National'}
         </p>
       </CardHeader>
       <CardContent>
@@ -138,30 +175,33 @@ function RaceCard({ race }: { race: any }) {
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Polls:</span>
-            <span className="font-medium">{race.pollCount}</span>
+            <span className="font-medium">{race._count?.polls || 0}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Candidates:</span>
-            <span className="font-medium">{race.candidateCount}</span>
+            <span className="font-medium">{race._count?.candidates || 0}</span>
           </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Rating:</span>
-            <Badge variant="warning" size="sm">
-              {race.rating}
-            </Badge>
-          </div>
+          {race.competitiveRating && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Rating:</span>
+              <Badge variant="warning" size="sm">
+                {race.competitiveRating}
+              </Badge>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2">
-          <Button size="sm" variant="primary" className="flex-1">
-            Edit
-          </Button>
-          <Button size="sm" variant="default" className="flex-1">
-            View
-          </Button>
-          <Button size="sm" variant="destructive">
-            🗑️
-          </Button>
+          <Link href={`/admin/races/${race.slug}`} className="flex-1">
+            <Button size="sm" variant="primary" className="w-full">
+              Edit
+            </Button>
+          </Link>
+          <Link href={`/races/${race.slug}`} className="flex-1">
+            <Button size="sm" variant="default" className="w-full">
+              View
+            </Button>
+          </Link>
         </div>
       </CardContent>
     </Card>
@@ -237,75 +277,4 @@ function AddRaceModal({ onClose }: { onClose: () => void }) {
       </Card>
     </div>
   )
-}
-
-function getMockRaces() {
-  return [
-    {
-      id: '1',
-      name: '2024 Presidential Election',
-      type: 'Presidential',
-      state: null,
-      status: 'active',
-      electionDate: '2024-11-05',
-      pollCount: 347,
-      candidateCount: 2,
-      rating: 'Toss-up',
-    },
-    {
-      id: '2',
-      name: '2024 Pennsylvania Senate',
-      type: 'Senate',
-      state: 'PA',
-      status: 'active',
-      electionDate: '2024-11-05',
-      pollCount: 45,
-      candidateCount: 2,
-      rating: 'Lean D',
-    },
-    {
-      id: '3',
-      name: '2024 Georgia Senate',
-      type: 'Senate',
-      state: 'GA',
-      status: 'active',
-      electionDate: '2024-11-05',
-      pollCount: 38,
-      candidateCount: 2,
-      rating: 'Toss-up',
-    },
-    {
-      id: '4',
-      name: '2024 Arizona Senate',
-      type: 'Senate',
-      state: 'AZ',
-      status: 'active',
-      electionDate: '2024-11-05',
-      pollCount: 32,
-      candidateCount: 3,
-      rating: 'Toss-up',
-    },
-    {
-      id: '5',
-      name: '2024 Nevada Senate',
-      type: 'Senate',
-      state: 'NV',
-      status: 'active',
-      electionDate: '2024-11-05',
-      pollCount: 28,
-      candidateCount: 2,
-      rating: 'Lean D',
-    },
-    {
-      id: '6',
-      name: '2024 Florida Senate',
-      type: 'Senate',
-      state: 'FL',
-      status: 'active',
-      electionDate: '2024-11-05',
-      pollCount: 25,
-      candidateCount: 2,
-      rating: 'Lean R',
-    },
-  ]
 }

@@ -1,22 +1,66 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
+import Link from 'next/link'
+
+interface Poll {
+  id: string
+  pollDate: string
+  sampleSize: number | null
+  methodology: string | null
+  isVerified: boolean
+  isOutlier: boolean
+  race: {
+    slug: string
+    raceName: string
+    raceType: string
+  }
+  pollster: {
+    name: string
+    slug: string
+  }
+}
 
 export default function AdminPollsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [polls, setPolls] = useState<Poll[]>([])
+  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState({ total: 0, today: 0, pending: 0, flagged: 0 })
 
-  // TODO: Fetch polls from API
-  const polls = getMockPolls()
+  useEffect(() => {
+    async function fetchPolls() {
+      try {
+        const res = await fetch('/api/polls?limit=100')
+        if (res.ok) {
+          const data = await res.json()
+          const list = data.data || []
+          setPolls(list)
+          const today = new Date().toDateString()
+          setStats({
+            total: data.meta?.total || list.length,
+            today: list.filter((p: Poll) => new Date(p.pollDate).toDateString() === today).length,
+            pending: list.filter((p: Poll) => !p.isVerified).length,
+            flagged: list.filter((p: Poll) => p.isOutlier).length,
+          })
+        }
+      } catch (error) {
+        console.error('Failed to fetch polls:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchPolls()
+  }, [])
 
   const filteredPolls = polls.filter(
     (poll) =>
-      poll.raceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      poll.pollster.toLowerCase().includes(searchTerm.toLowerCase())
+      poll.race?.raceName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      poll.pollster?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
@@ -53,25 +97,25 @@ export default function AdminPollsPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">1,247</div>
+            <div className="text-2xl font-bold">{loading ? '...' : stats.total.toLocaleString()}</div>
             <div className="text-sm text-muted-foreground">Total Polls</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">23</div>
+            <div className="text-2xl font-bold text-green-600">{loading ? '...' : stats.today}</div>
             <div className="text-sm text-muted-foreground">Added Today</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-yellow-600">5</div>
+            <div className="text-2xl font-bold text-yellow-600">{loading ? '...' : stats.pending}</div>
             <div className="text-sm text-muted-foreground">Pending Review</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-red-600">2</div>
+            <div className="text-2xl font-bold text-red-600">{loading ? '...' : stats.flagged}</div>
             <div className="text-sm text-muted-foreground">Flagged</div>
           </CardContent>
         </Card>
@@ -99,36 +143,38 @@ export default function AdminPollsPage() {
                 {filteredPolls.map((poll) => (
                   <tr key={poll.id} className="hover:bg-muted/50">
                     <td className="px-4 py-3">
-                      <div className="font-medium">{poll.raceName}</div>
-                      <div className="text-sm text-muted-foreground">{poll.raceType}</div>
+                      <div className="font-medium">{poll.race?.raceName || 'Unknown'}</div>
+                      <div className="text-sm text-muted-foreground">{poll.race?.raceType}</div>
                     </td>
                     <td className="px-4 py-3">
-                      <div>{poll.pollster}</div>
-                      <div className="text-sm text-muted-foreground">{poll.methodology}</div>
+                      <div>{poll.pollster?.name || 'Unknown'}</div>
+                      <div className="text-sm text-muted-foreground">{poll.methodology || 'N/A'}</div>
                     </td>
                     <td className="px-4 py-3 text-sm">
                       {new Date(poll.pollDate).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3 text-sm">{poll.sampleSize.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-sm">{poll.sampleSize?.toLocaleString() || 'N/A'}</td>
                     <td className="px-4 py-3">
                       <Badge
                         variant={
-                          poll.status === 'published'
+                          poll.isVerified
                             ? 'success'
-                            : poll.status === 'pending'
-                            ? 'warning'
-                            : 'error'
+                            : poll.isOutlier
+                            ? 'error'
+                            : 'warning'
                         }
                         size="sm"
                       >
-                        {poll.status}
+                        {poll.isVerified ? 'verified' : poll.isOutlier ? 'flagged' : 'pending'}
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        <Button size="sm" variant="ghost">
-                          Edit
-                        </Button>
+                        <Link href={`/admin/polls/${poll.id}`}>
+                          <Button size="sm" variant="ghost">
+                            Edit
+                          </Button>
+                        </Link>
                         <Button size="sm" variant="ghost">
                           Delete
                         </Button>
@@ -186,59 +232,4 @@ function AddPollModal({ onClose }: { onClose: () => void }) {
       </Card>
     </div>
   )
-}
-
-function getMockPolls() {
-  return [
-    {
-      id: '1',
-      raceName: '2024 Pennsylvania Senate',
-      raceType: 'Senate',
-      pollster: 'Monmouth University',
-      methodology: 'Phone',
-      pollDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      sampleSize: 1247,
-      status: 'published',
-    },
-    {
-      id: '2',
-      raceName: '2024 Presidential',
-      raceType: 'Presidential',
-      pollster: 'Quinnipiac University',
-      methodology: 'Phone',
-      pollDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-      sampleSize: 1589,
-      status: 'published',
-    },
-    {
-      id: '3',
-      raceName: '2024 Georgia Senate',
-      raceType: 'Senate',
-      pollster: 'Emerson College',
-      methodology: 'Online',
-      pollDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      sampleSize: 983,
-      status: 'pending',
-    },
-    {
-      id: '4',
-      raceName: '2024 Arizona Senate',
-      raceType: 'Senate',
-      pollster: 'Marist College',
-      methodology: 'Phone',
-      pollDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      sampleSize: 1124,
-      status: 'published',
-    },
-    {
-      id: '5',
-      raceName: '2024 Nevada Senate',
-      raceType: 'Senate',
-      pollster: 'Rasmussen Reports',
-      methodology: 'IVR',
-      pollDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      sampleSize: 750,
-      status: 'flagged',
-    },
-  ]
 }

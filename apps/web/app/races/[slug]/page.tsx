@@ -51,47 +51,30 @@ export default async function RacePage({ params }: Props) {
     notFound()
   }
 
-  // TODO: Fetch from API - using mock data for now
-  const mockPolls = [
-    {
-      id: '1',
-      pollster: { name: 'Monmouth University', methodologyGrade: 'A+' },
-      pollDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      sampleSize: 1247,
-      marginOfError: 3.2,
-      methodology: 'Phone (RDD)',
-      results: { 'Candidate A': 48.5, 'Candidate B': 45.2, 'Other': 6.3 },
-    },
-    {
-      id: '2',
-      pollster: { name: 'Quinnipiac University', methodologyGrade: 'A-' },
-      pollDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      sampleSize: 1589,
-      marginOfError: 3.5,
-      methodology: 'Phone (Live Caller)',
-      results: { 'Candidate A': 47.1, 'Candidate B': 46.8, 'Other': 6.1 },
-    },
-  ]
+  // Use polls from API response (race includes polls via Prisma include)
+  const polls = race.polls || []
 
-  const mockForecast = {
-    candidates: [
-      { name: 'Candidate A', party: 'D', winProbability: 55.7, expectedVoteShare: 48.9 },
-      { name: 'Candidate B', party: 'R', winProbability: 44.3, expectedVoteShare: 47.2 },
-    ],
-    lastUpdated: new Date().toISOString(),
-    simulations: 10000,
-  }
+  // Use forecast from API response
+  const latestForecast = race.forecasts?.[0]
+  const forecast = latestForecast ? {
+    candidates: latestForecast.predictions || [],
+    lastUpdated: latestForecast.forecastDate,
+    simulations: latestForecast.simulationCount || 10000,
+  } : null
 
-  const mockTrends = Array.from({ length: 30 }, (_, i) => ({
-    date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    'Candidate A': 47 + Math.random() * 4,
-    'Candidate B': 45 + Math.random() * 4,
+  // Generate trends from poll data
+  const trends = polls.length > 0
+    ? polls.slice().reverse().map((poll: any) => ({
+        date: new Date(poll.pollDate).toISOString().split('T')[0],
+        ...poll.results,
+      }))
+    : []
+
+  // Extract candidates from race or polls
+  const candidates = race.candidates || Object.keys(polls[0]?.results || {}).map((name: string) => ({
+    name,
+    party: name.includes('(D)') ? 'D' : name.includes('(R)') ? 'R' : 'I',
   }))
-
-  const mockCandidates = [
-    { name: 'Candidate A', party: 'D' },
-    { name: 'Candidate B', party: 'R' },
-  ]
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -104,7 +87,13 @@ export default async function RacePage({ params }: Props) {
           {/* Trends Chart */}
           <section>
             <Suspense fallback={<LoadingSpinner />}>
-              <RaceTrends trends={mockTrends} candidates={mockCandidates} />
+              {trends.length > 0 ? (
+                <RaceTrends trends={trends} candidates={candidates} />
+              ) : (
+                <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground">
+                  No polling trends available yet
+                </div>
+              )}
             </Suspense>
           </section>
 
@@ -112,7 +101,13 @@ export default async function RacePage({ params }: Props) {
           <section>
             <h2 className="text-2xl font-bold mb-4">Recent Polls</h2>
             <Suspense fallback={<LoadingSpinner />}>
-              <RacePolls polls={mockPolls} />
+              {polls.length > 0 ? (
+                <RacePolls polls={polls} />
+              ) : (
+                <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground">
+                  No polls available for this race yet
+                </div>
+              )}
             </Suspense>
           </section>
         </div>
@@ -122,7 +117,13 @@ export default async function RacePage({ params }: Props) {
           {/* Forecast */}
           <section>
             <Suspense fallback={<LoadingSpinner />}>
-              <RaceForecast forecast={mockForecast} />
+              {forecast ? (
+                <RaceForecast forecast={forecast} />
+              ) : (
+                <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground">
+                  No forecast available yet
+                </div>
+              )}
             </Suspense>
           </section>
 

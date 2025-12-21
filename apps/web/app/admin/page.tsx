@@ -16,10 +16,11 @@ export default async function AdminPage() {
     redirect('/api/auth/signin')
   }
 
-  // TODO: Check if user has admin role
-  // if (session.user.role !== 'admin') {
-  //   redirect('/')
-  // }
+  // Check if user has admin role
+  const userRole = (session.user as any)?.role
+  if (userRole !== 'admin' && userRole !== 'moderator') {
+    redirect('/?error=unauthorized')
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">

@@ -1,14 +1,61 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { TrendChart } from '@/components/charts/TrendChart'
 
-interface PollsterAccuracyChartProps {
-  pollsterId: string
+interface AccuracyDataPoint {
+  year: string
+  accuracy: number
 }
 
-export function PollsterAccuracyChart({ pollsterId }: PollsterAccuracyChartProps) {
-  // TODO: Fetch accuracy history from API
-  const accuracyData = getMockAccuracyData()
+interface PollsterAccuracyChartProps {
+  pollsterSlug: string
+}
+
+export function PollsterAccuracyChart({ pollsterSlug }: PollsterAccuracyChartProps) {
+  const [accuracyData, setAccuracyData] = useState<AccuracyDataPoint[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchAccuracy() {
+      try {
+        const res = await fetch(`/api/pollsters/${pollsterSlug}/accuracy`)
+        if (res.ok) {
+          const data = await res.json()
+          // Transform API response to chart format
+          if (data.historicalAccuracy?.byYear?.length > 0) {
+            setAccuracyData(data.historicalAccuracy.byYear)
+          } else {
+            // Use overall accuracy as single data point if no yearly data
+            setAccuracyData([
+              { year: '2024', accuracy: data.overallAccuracy || 85 }
+            ])
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch accuracy data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAccuracy()
+  }, [pollsterSlug])
+
+  if (loading) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-6 animate-pulse">
+        <div className="h-80 bg-muted rounded"></div>
+      </div>
+    )
+  }
+
+  if (accuracyData.length === 0) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground">
+        No accuracy history available for this pollster
+      </div>
+    )
+  }
 
   return (
     <div className="bg-card border border-border rounded-lg p-6">
@@ -63,16 +110,4 @@ export function PollsterAccuracyChart({ pollsterId }: PollsterAccuracyChartProps
       </div>
     </div>
   )
-}
-
-function getMockAccuracyData() {
-  return [
-    { year: '2012', accuracy: 88.5 },
-    { year: '2014', accuracy: 86.2 },
-    { year: '2016', accuracy: 82.1 },
-    { year: '2018', accuracy: 91.3 },
-    { year: '2020', accuracy: 87.9 },
-    { year: '2022', accuracy: 93.2 },
-    { year: '2024', accuracy: 94.2 },
-  ]
 }

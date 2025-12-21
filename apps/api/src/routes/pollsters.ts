@@ -188,13 +188,69 @@ export async function pollstersRoutes(
           return reply.code(404).send({ error: 'Pollster not found' })
         }
 
-        // TODO: Add historical accuracy data by year/race type
+        // Fetch polls grouped by year to calculate historical accuracy
+        const polls = await prisma.poll.findMany({
+          where: { pollster: { slug } },
+          select: {
+            pollDate: true,
+            historicalAccuracy: true,
+            race: { select: { raceType: true } },
+          },
+          orderBy: { pollDate: 'desc' },
+        })
+
+        // Calculate accuracy by year
+        const byYear: { year: string; accuracy: number; pollCount: number }[] = []
+        const yearMap = new Map<string, { sum: number; count: number }>()
+
+        for (const poll of polls) {
+          if (poll.historicalAccuracy !== null) {
+            const year = new Date(poll.pollDate).getFullYear().toString()
+            const existing = yearMap.get(year) || { sum: 0, count: 0 }
+            yearMap.set(year, {
+              sum: existing.sum + poll.historicalAccuracy,
+              count: existing.count + 1,
+            })
+          }
+        }
+
+        for (const [year, data] of yearMap.entries()) {
+          byYear.push({
+            year,
+            accuracy: data.sum / data.count,
+            pollCount: data.count,
+          })
+        }
+        byYear.sort((a, b) => a.year.localeCompare(b.year))
+
+        // Calculate accuracy by race type
+        const byRaceType: Record<string, { accuracy: number; pollCount: number }> = {}
+        const raceTypeMap = new Map<string, { sum: number; count: number }>()
+
+        for (const poll of polls) {
+          if (poll.historicalAccuracy !== null && poll.race?.raceType) {
+            const raceType = poll.race.raceType
+            const existing = raceTypeMap.get(raceType) || { sum: 0, count: 0 }
+            raceTypeMap.set(raceType, {
+              sum: existing.sum + poll.historicalAccuracy,
+              count: existing.count + 1,
+            })
+          }
+        }
+
+        for (const [raceType, data] of raceTypeMap.entries()) {
+          byRaceType[raceType] = {
+            accuracy: data.sum / data.count,
+            pollCount: data.count,
+          }
+        }
+
         const response = {
           ...pollster,
           historicalAccuracy: {
             overall: pollster.overallAccuracy,
-            byYear: [], // Placeholder
-            byRaceType: {}, // Placeholder
+            byYear: byYear.length > 0 ? byYear : null,
+            byRaceType: Object.keys(byRaceType).length > 0 ? byRaceType : null,
           },
         }
 
