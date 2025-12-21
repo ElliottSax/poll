@@ -19,6 +19,7 @@ import { pollsRoutes } from './routes/polls'
 import { pollstersRoutes } from './routes/pollsters'
 import { forecastsRoutes } from './routes/forecasts'
 import { healthRoutes } from './routes/health'
+import { scraperRoutes } from './routes/scraper'
 
 // Import services
 import { initializeWebSocketService, WebSocketService } from './services/websocket'
@@ -133,6 +134,7 @@ async function registerPlugins() {
         { name: 'polls', description: 'Poll endpoints' },
         { name: 'pollsters', description: 'Pollster endpoints' },
         { name: 'forecasts', description: 'Forecast endpoints' },
+        { name: 'scraper', description: 'Poll scraping and scheduling' },
       ],
     },
   })
@@ -161,6 +163,7 @@ async function registerRoutes() {
   await fastify.register(pollsRoutes, { prefix: '/api/polls' })
   await fastify.register(pollstersRoutes, { prefix: '/api/pollsters' })
   await fastify.register(forecastsRoutes, { prefix: '/api/forecasts' })
+  await fastify.register(scraperRoutes, { prefix: '/api/scraper' })
 }
 
 // Start server
