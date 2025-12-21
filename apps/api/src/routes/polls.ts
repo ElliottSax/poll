@@ -202,6 +202,127 @@ export async function pollsRoutes(
     },
   })
 
+  // Get polling history for charts (optimized for time series)
+  fastify.get('/history/:raceSlug', {
+    schema: {
+      description: 'Get polling history for a race (optimized for charts)',
+      tags: ['polls'],
+      params: {
+        type: 'object',
+        properties: {
+          raceSlug: { type: 'string' },
+        },
+        required: ['raceSlug'],
+      },
+      querystring: {
+        type: 'object',
+        properties: {
+          days: { type: 'number', default: 90 },
+        },
+      },
+    },
+    handler: async (request, reply) => {
+      const { raceSlug } = request.params as { raceSlug: string }
+      const { days = 90 } = request.query as { days?: number }
+
+      // Try cache first
+      const cacheKey = `polls:history:${raceSlug}:${days}`
+      const cached = await cache.get(cacheKey)
+      if (cached) {
+        return reply.send(cached)
+      }
+
+      // Get race by slug
+      const race = await prisma.race.findUnique({
+        where: { slug: raceSlug },
+        include: {
+          candidates: {
+            select: {
+              id: true,
+              name: true,
+              party: true,
+            },
+          },
+        },
+      })
+
+      if (!race) {
+        return reply.code(404).send({ error: 'Race not found' })
+      }
+
+      // Get polls within date range
+      const startDate = new Date()
+      startDate.setDate(startDate.getDate() - days)
+
+      const polls = await prisma.poll.findMany({
+        where: {
+          raceId: race.id,
+          pollDate: { gte: startDate },
+        },
+        orderBy: { pollDate: 'asc' },
+        include: {
+          pollster: {
+            select: {
+              id: true,
+              name: true,
+              methodologyGrade: true,
+            },
+          },
+        },
+      })
+
+      // Transform data for chart consumption
+      const chartData = polls.map((poll) => ({
+        id: poll.id,
+        date: poll.pollDate.toISOString().split('T')[0],
+        pollster: poll.pollster.name,
+        pollsterGrade: poll.pollster.methodologyGrade,
+        sampleSize: poll.sampleSize,
+        marginOfError: poll.marginOfError,
+        methodology: poll.methodology,
+        results: poll.results as Record<string, number>,
+        sourceUrl: poll.sourceUrl,
+      }))
+
+      // Calculate aggregate stats
+      const candidateColors: Record<string, string> = {
+        D: '#3B82F6',
+        R: '#EF4444',
+        I: '#10B981',
+      }
+
+      const response = {
+        race: {
+          id: race.id,
+          slug: race.slug,
+          name: race.raceName,
+          type: race.raceType,
+          state: race.state,
+          electionDate: race.electionDate,
+        },
+        candidates: race.candidates.map((c) => ({
+          name: c.name,
+          party: c.party,
+          color: candidateColors[c.party] || '#6B7280',
+        })),
+        polls: chartData,
+        meta: {
+          totalPolls: polls.length,
+          dateRange: {
+            start: polls[0]?.pollDate.toISOString().split('T')[0] || null,
+            end: polls[polls.length - 1]?.pollDate.toISOString().split('T')[0] || null,
+          },
+          pollsters: [...new Set(polls.map((p) => p.pollster.name))],
+        },
+      }
+
+      // Cache for 5 minutes
+      await cache.set(cacheKey, response, 300)
+
+      return reply.send(response)
+    },
+  })
+
   // Get recent polls (homepage)
   fastify.get('/recent', {
     schema: {
