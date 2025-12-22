@@ -89,6 +89,33 @@ const DEMO_POLLS: Poll[] = [
   },
 ]
 
+// Known party affiliations for demo candidates
+const PARTY_MAP: Record<string, 'D' | 'R'> = {
+  // Democrats
+  'Kamala Harris': 'D',
+  'Joe Biden': 'D',
+  'Bob Casey': 'D',
+  'Jacky Rosen': 'D',
+  'Ruben Gallego': 'D',
+  'Elissa Slotkin': 'D',
+  'Tammy Baldwin': 'D',
+  'Sherrod Brown': 'D',
+  'Jon Tester': 'D',
+  // Republicans
+  'Donald Trump': 'R',
+  'Dave McCormick': 'R',
+  'Sam Brown': 'R',
+  'Kari Lake': 'R',
+  'Mike Rogers': 'R',
+  'Eric Hovde': 'R',
+  'Bernie Moreno': 'R',
+  'Tim Sheehy': 'R',
+}
+
+function getParty(name: string): 'D' | 'R' {
+  return PARTY_MAP[name] || 'R' // Default to R if unknown
+}
+
 function formatTimeAgo(dateStr: string): string {
   const date = new Date(dateStr)
   const now = new Date()
@@ -186,15 +213,13 @@ export function RecentPolls() {
 
                 {/* Results bar */}
                 <div className="flex items-center gap-3">
-                  {candidates.slice(0, 2).map(([name, pct], idx) => {
-                    const isD = name.includes('Harris') || name.includes('Biden') || name.includes('Casey') ||
-                               name.includes('Rosen') || name.includes('Gallego') || name.includes('Slotkin') ||
-                               name.includes('Baldwin') || name.includes('Brown') && !name.includes('Sam')
+                  {candidates.slice(0, 2).map(([name, pct]) => {
+                    const party = getParty(name)
                     return (
                       <div key={name} className="flex items-center gap-2">
-                        <div className={`w-2.5 h-2.5 rounded-full ${isD ? 'bg-democrat' : 'bg-republican'}`} />
+                        <div className={`w-2.5 h-2.5 rounded-full ${party === 'D' ? 'bg-democrat' : 'bg-republican'}`} />
                         <span className="text-sm font-medium">{name.split(' ').pop()}</span>
-                        <span className={`text-sm font-bold ${isD ? 'text-democrat' : 'text-republican'}`}>
+                        <span className={`text-sm font-bold ${party === 'D' ? 'text-democrat' : 'text-republican'}`}>
                           {pct.toFixed(1)}%
                         </span>
                       </div>

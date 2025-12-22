@@ -25,8 +25,7 @@ export function Header() {
     { name: 'Forecast', href: '/forecast' },
     { name: 'Charts', href: '/charts-showcase', featured: true },
     { name: 'Pollsters', href: '/pollsters' },
-    { name: 'Scenarios', href: '/scenarios' },
-    { name: 'API', href: '/api-docs' },
+    { name: 'About', href: '/about' },
   ]
 
   const isActive = (href: string) => pathname === href

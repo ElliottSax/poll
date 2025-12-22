@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import Link from 'next/link'
 import { FeaturedRaces } from '@/components/features/home/FeaturedRaces'
 import { TrendingRaces } from '@/components/features/home/TrendingRaces'
 import { RecentPolls } from '@/components/features/home/RecentPolls'
@@ -84,11 +85,14 @@ export default function HomePage() {
                 forecasts change. Never miss an important update.
               </p>
 
-              <button className="group relative overflow-hidden bg-gradient-to-r from-primary to-purple-500 text-white px-10 py-4 rounded-xl font-semibold hover:shadow-glow transition-all duration-300 inline-flex items-center justify-center gap-3">
+              <Link
+                href="/dashboard"
+                className="group relative overflow-hidden bg-gradient-to-r from-primary to-purple-500 text-white px-10 py-4 rounded-xl font-semibold hover:shadow-glow transition-all duration-300 inline-flex items-center justify-center gap-3"
+              >
                 <Bell className="h-5 w-5 group-hover:animate-pulse-glow" />
-                <span className="relative z-10">Sign Up for Alerts</span>
+                <span className="relative z-10">Get Started</span>
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-purple-500/90 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
+              </Link>
 
               <p className="text-sm text-muted-foreground mt-6">
                 Join 10,000+ political enthusiasts tracking elections

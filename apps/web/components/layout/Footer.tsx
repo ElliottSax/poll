@@ -9,25 +9,19 @@ export function Footer() {
       { name: 'Races', href: '/races' },
       { name: 'Forecast', href: '/forecast' },
       { name: 'Pollsters', href: '/pollsters' },
-      { name: 'Scenarios', href: '/scenarios' },
+      { name: 'Charts', href: '/charts-showcase' },
     ],
     company: [
       { name: 'About', href: '/about' },
       { name: 'Methodology', href: '/methodology' },
-      { name: 'Accuracy', href: '/accuracy' },
-      { name: 'Blog', href: '/blog' },
+      { name: 'Dashboard', href: '/dashboard' },
+      { name: 'Settings', href: '/settings' },
     ],
     developers: [
-      { name: 'API Documentation', href: '/api-docs' },
-      { name: 'Pricing', href: '/pricing' },
-      { name: 'Embed Widgets', href: '/embed' },
       { name: 'GitHub', href: 'https://github.com/ElliottSax/poll' },
     ],
     legal: [
-      { name: 'Privacy Policy', href: '/privacy' },
-      { name: 'Terms of Service', href: '/terms' },
-      { name: 'Cookie Policy', href: '/cookies' },
-      { name: 'Contact', href: '/contact' },
+      { name: 'About Us', href: '/about' },
     ],
   }
 
