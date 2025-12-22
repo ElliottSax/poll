@@ -29,11 +29,8 @@ const nextConfig = {
 
   // Rewrites for API proxy (optional, for same-origin requests)
   async rewrites() {
-    // Only add rewrites if API URL is configured
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL
-    if (!apiUrl) {
-      return []
-    }
+    // Default to local API server for development
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
     return [
       {

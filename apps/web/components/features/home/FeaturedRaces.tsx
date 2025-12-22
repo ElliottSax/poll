@@ -1,28 +1,47 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowRight, TrendingUp, Clock } from 'lucide-react'
+import { ArrowRight, TrendingUp, Clock, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 
-// This will be replaced with actual data from API
-const mockRaces = [
+interface Candidate {
+  name: string
+  party: string
+  percentage: number
+}
+
+interface Race {
+  id: string
+  slug: string
+  name: string
+  type: string
+  rating: string
+  candidates: Candidate[]
+  pollCount: number
+  lastUpdate: string
+  isFeatured: boolean
+}
+
+// Demo data for when API is not available
+const DEMO_RACES: Race[] = [
   {
     id: '1',
-    slug: '2024-presidential',
+    slug: 'president-2024',
     name: '2024 Presidential Election',
     type: 'Presidential',
     rating: 'Toss-up',
     candidates: [
-      { name: 'Joe Biden', party: 'D', percentage: 48.2 },
       { name: 'Donald Trump', party: 'R', percentage: 47.8 },
+      { name: 'Kamala Harris', party: 'D', percentage: 47.2 },
     ],
-    pollCount: 127,
+    pollCount: 156,
     lastUpdate: '2 hours ago',
     isFeatured: true,
   },
   {
     id: '2',
-    slug: 'pa-senate-2024',
+    slug: 'senate-pa-2024',
     name: 'Pennsylvania Senate',
     type: 'Senate',
     rating: 'Lean D',
@@ -30,27 +49,91 @@ const mockRaces = [
       { name: 'Bob Casey', party: 'D', percentage: 49.5 },
       { name: 'Dave McCormick', party: 'R', percentage: 45.2 },
     ],
-    pollCount: 23,
+    pollCount: 34,
     lastUpdate: '5 hours ago',
     isFeatured: false,
   },
   {
     id: '3',
-    slug: 'ga-senate-2024',
-    name: 'Georgia Senate',
+    slug: 'senate-az-2024',
+    name: 'Arizona Senate',
     type: 'Senate',
     rating: 'Toss-up',
     candidates: [
-      { name: 'Raphael Warnock', party: 'D', percentage: 48.7 },
-      { name: 'Herschel Walker', party: 'R', percentage: 48.1 },
+      { name: 'Ruben Gallego', party: 'D', percentage: 48.1 },
+      { name: 'Kari Lake', party: 'R', percentage: 46.9 },
+    ],
+    pollCount: 28,
+    lastUpdate: '1 day ago',
+    isFeatured: false,
+  },
+  {
+    id: '4',
+    slug: 'senate-nv-2024',
+    name: 'Nevada Senate',
+    type: 'Senate',
+    rating: 'Lean D',
+    candidates: [
+      { name: 'Jacky Rosen', party: 'D', percentage: 49.2 },
+      { name: 'Sam Brown', party: 'R', percentage: 44.8 },
+    ],
+    pollCount: 22,
+    lastUpdate: '3 hours ago',
+    isFeatured: false,
+  },
+  {
+    id: '5',
+    slug: 'senate-mi-2024',
+    name: 'Michigan Senate',
+    type: 'Senate',
+    rating: 'Toss-up',
+    candidates: [
+      { name: 'Elissa Slotkin', party: 'D', percentage: 47.5 },
+      { name: 'Mike Rogers', party: 'R', percentage: 46.8 },
     ],
     pollCount: 31,
-    lastUpdate: '1 day ago',
+    lastUpdate: '6 hours ago',
+    isFeatured: false,
+  },
+  {
+    id: '6',
+    slug: 'senate-wi-2024',
+    name: 'Wisconsin Senate',
+    type: 'Senate',
+    rating: 'Lean D',
+    candidates: [
+      { name: 'Tammy Baldwin', party: 'D', percentage: 50.1 },
+      { name: 'Eric Hovde', party: 'R', percentage: 45.3 },
+    ],
+    pollCount: 26,
+    lastUpdate: '4 hours ago',
     isFeatured: false,
   },
 ]
 
 export function FeaturedRaces() {
+  const [races, setRaces] = useState<Race[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchRaces() {
+      try {
+        const response = await fetch('/api/races/featured?limit=6')
+        if (response.ok) {
+          const data = await response.json()
+          setRaces(data)
+        } else {
+          setRaces(DEMO_RACES)
+        }
+      } catch {
+        setRaces(DEMO_RACES)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchRaces()
+  }, [])
+
   const getRatingColor = (rating: string) => {
     if (rating.includes('D')) return 'bg-democrat/10 text-democrat border-democrat/20'
     if (rating.includes('R')) return 'bg-republican/10 text-republican border-republican/20'
@@ -67,10 +150,20 @@ export function FeaturedRaces() {
       : 'bg-gradient-to-r from-republican/80 to-republican'
   }
 
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 stagger-fade-in">
-      {mockRaces.map((race, index) => {
-        const spread = Math.abs(race.candidates[0].percentage - race.candidates[1].percentage)
+      {races.map((race) => {
+        const spread = race.candidates.length >= 2
+          ? Math.abs(race.candidates[0].percentage - race.candidates[1].percentage)
+          : 0
         const isCloseRace = spread < 2
 
         return (
@@ -110,7 +203,7 @@ export function FeaturedRaces() {
 
               {/* Candidates with enhanced progress bars */}
               <div className="space-y-4 mb-5">
-                {race.candidates.map((candidate, idx) => (
+                {race.candidates.slice(0, 2).map((candidate, idx) => (
                   <div key={idx} className="group/candidate">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2.5">
@@ -118,14 +211,14 @@ export function FeaturedRaces() {
                         <span className="text-sm font-semibold">{candidate.name}</span>
                       </div>
                       <span className={`text-lg font-bold ${candidate.party === 'D' ? 'text-democrat' : 'text-republican'}`}>
-                        {candidate.percentage}%
+                        {candidate.percentage.toFixed(1)}%
                       </span>
                     </div>
                     <div className="relative h-3 bg-muted rounded-full overflow-hidden">
                       <div
                         className={`h-full ${getPartyGradient(candidate.party)} poll-bar transition-all duration-1000 ease-out rounded-full`}
                         style={{
-                          width: `${candidate.percentage}%`,
+                          width: `${Math.min(candidate.percentage, 100)}%`,
                           transitionDelay: `${idx * 100}ms`
                         }}
                       />

@@ -6,6 +6,7 @@ import { RacePolls } from '@/components/features/race/RacePolls'
 import { RaceForecast } from '@/components/features/race/RaceForecast'
 import { RaceTrends } from '@/components/features/race/RaceTrends'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { UltraThinkPanel } from '@/components/UltraThinkPanel'
 
 type Props = {
   params: { slug: string }
@@ -99,7 +100,20 @@ export default async function RacePage({ params }: Props) {
 
           {/* Polls */}
           <section>
-            <h2 className="text-2xl font-bold mb-4">Recent Polls</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Recent Polls</h2>
+              {polls.length > 0 && (
+                <a
+                  href={`/races/${race.slug}/history`}
+                  className="text-primary hover:text-primary/80 text-sm font-medium flex items-center gap-1"
+                >
+                  View full history
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              )}
+            </div>
             <Suspense fallback={<LoadingSpinner />}>
               {polls.length > 0 ? (
                 <RacePolls polls={polls} />
@@ -114,6 +128,20 @@ export default async function RacePage({ params }: Props) {
 
         {/* Sidebar - 1 column */}
         <div className="space-y-8">
+          {/* UltraThink Analytics */}
+          {polls.length > 0 && (
+            <section>
+              <UltraThinkPanel
+                data={polls.map((poll: any) => ({
+                  date: poll.pollDate,
+                  value: Object.values(poll.results)[0] as number,
+                  ...poll.results,
+                }))}
+                candidateId={candidates[0]?.name || 'candidate'}
+              />
+            </section>
+          )}
+
           {/* Forecast */}
           <section>
             <Suspense fallback={<LoadingSpinner />}>
