@@ -1,58 +1,38 @@
-import Redis from 'ioredis'
-import { config } from '../config/env'
+/**
+ * Stub Redis/Cache implementation for MVP
+ * No caching - all operations are no-ops
+ * This allows code to compile without requiring Redis infrastructure
+ */
+
 import { logger } from './logger'
 
-export const redis = new Redis(config.redisUrl, {
-  maxRetriesPerRequest: 3,
-  enableReadyCheck: true,
-  retryStrategy(times) {
-    const delay = Math.min(times * 50, 2000)
-    logger.warn(`Redis retry attempt ${times}, waiting ${delay}ms`)
-    return delay
+// Stub redis client (no-op)
+export const redis = {
+  async ping() {
+    return 'PONG'
   },
-})
+  async quit() {
+    return 'OK'
+  },
+}
 
-redis.on('connect', () => {
-  logger.info('Redis client connected')
-})
-
-redis.on('error', (err) => {
-  logger.error({ err }, 'Redis error')
-})
-
-redis.on('ready', () => {
-  logger.info('Redis client ready')
-})
-
-redis.on('close', () => {
-  logger.warn('Redis connection closed')
-})
-
-redis.on('reconnecting', () => {
-  logger.warn('Redis client reconnecting')
-})
-
-// Helper functions for caching
+// No-op cache implementation
 export const cache = {
-  async get<T>(key: string): Promise<T | null> {
-    const value = await redis.get(key)
-    return value ? JSON.parse(value) : null
+  async get<T>(_key: string): Promise<T | null> {
+    // Always return null (cache miss)
+    return null
   },
 
-  async set(key: string, value: any, ttl?: number): Promise<void> {
-    const serialized = JSON.stringify(value)
-    if (ttl) {
-      await redis.setex(key, ttl, serialized)
-    } else {
-      await redis.set(key, serialized)
-    }
+  async set(_key: string, _value: any, _ttl?: number): Promise<void> {
+    // No-op
+    logger.debug('Cache set called (no-op in MVP)')
   },
 
-  async del(key: string): Promise<void> {
-    await redis.del(key)
+  async del(_key: string): Promise<void> {
+    // No-op
   },
 
   async flush(): Promise<void> {
-    await redis.flushdb()
+    // No-op
   },
 }

@@ -1,6 +1,5 @@
 import { FastifyInstance, FastifyPluginOptions } from 'fastify'
 import { prisma } from '../utils/prisma'
-import { redis } from '../utils/redis'
 import { metrics, getSystemMetrics } from '../utils/metrics'
 
 export async function healthRoutes(
@@ -35,7 +34,7 @@ export async function healthRoutes(
   // Detailed health check
   fastify.get('/detailed', {
     schema: {
-      description: 'Detailed health check with database and Redis status',
+      description: 'Detailed health check with database status',
       tags: ['health'],
       response: {
         200: {
@@ -45,7 +44,6 @@ export async function healthRoutes(
             timestamp: { type: 'string' },
             uptime: { type: 'number' },
             database: { type: 'string' },
-            redis: { type: 'string' },
             memory: { type: 'object' },
           },
         },
@@ -60,14 +58,6 @@ export async function healthRoutes(
         databaseStatus = 'error'
       }
 
-      // Check Redis
-      let redisStatus = 'ok'
-      try {
-        await redis.ping()
-      } catch (error) {
-        redisStatus = 'error'
-      }
-
       // Memory usage
       const memoryUsage = process.memoryUsage()
       const memory = {
@@ -78,11 +68,10 @@ export async function healthRoutes(
       }
 
       return reply.send({
-        status: databaseStatus === 'ok' && redisStatus === 'ok' ? 'ok' : 'degraded',
+        status: databaseStatus === 'ok' ? 'ok' : 'degraded',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         database: databaseStatus,
-        redis: redisStatus,
         memory,
       })
     },
