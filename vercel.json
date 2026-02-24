@@ -1,8 +1,13 @@
 {
-  "buildCommand": "npx turbo run build --filter=web",
+  "buildCommand": "cd apps/web && npx turbo run build --filter=web...",
   "outputDirectory": "apps/web/.next",
   "devCommand": "cd apps/web && npm run dev",
   "installCommand": "npm install",
-  "framework": null,
-  "ignoreCommand": "git diff HEAD^ HEAD --quiet . '!./apps/web'"
+  "framework": "nextjs",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/apps/web/$1"
+    }
+  ]
 }
