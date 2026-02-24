@@ -58,7 +58,7 @@ export default function MethodologyPage() {
             <div>
               <h3 className="font-semibold text-lg mb-2">Methodology Bonus</h3>
               <p className="text-muted-foreground">
-                Phone polls (1.2x) > Mixed (1.1x) > Online (1.0x) > IVR (0.8x)
+                Phone polls (1.2x) {'>'}  Mixed (1.1x) {'>'} Online (1.0x) {'>'} IVR (0.8x)
               </p>
             </div>
           </div>

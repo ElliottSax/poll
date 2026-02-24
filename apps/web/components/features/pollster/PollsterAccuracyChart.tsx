@@ -69,12 +69,10 @@ export function PollsterAccuracyChart({ pollsterSlug }: PollsterAccuracyChartPro
 
       <div className="h-80">
         <TrendChart
-          data={accuracyData}
+          data={accuracyData.map(d => ({ ...d, date: d.year }))}
           lines={[
             { dataKey: 'accuracy', color: '#3b82f6', name: 'Accuracy Rate' },
           ]}
-          xAxisKey="year"
-          yAxisDomain={[75, 100]}
         />
       </div>
 

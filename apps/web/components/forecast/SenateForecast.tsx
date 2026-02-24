@@ -39,13 +39,13 @@ export function SenateForecast({
           <ProbabilityBar
             data={[
               {
-                label: 'Democratic Control',
-                value: forecast.demControl,
+                name: 'Democratic Control',
+                probability: forecast.demControl,
                 color: '#3b82f6',
               },
               {
-                label: 'Republican Control',
-                value: forecast.repControl,
+                name: 'Republican Control',
+                probability: forecast.repControl,
                 color: '#ef4444',
               },
             ]}

@@ -98,7 +98,7 @@ class Logger {
 
   private sendToRemote(entry: LogEntry) {
     // Send to logging service (e.g., Sentry, LogRocket, etc.)
-    if (typeof window !== 'undefined' && window.fetch) {
+    if (typeof window !== 'undefined') {
       // Only send errors in production
       const endpoint = process.env.NEXT_PUBLIC_LOG_ENDPOINT;
       if (endpoint) {

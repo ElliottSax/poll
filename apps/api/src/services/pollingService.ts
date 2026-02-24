@@ -11,9 +11,7 @@
 
 import { prisma } from '../utils/prisma'
 import { logger } from '../utils/logger'
-import { CacheInvalidation } from '../utils/cacheInvalidation'
 import { pollScraper, ScrapedPoll } from './pollScraper'
-import { DateParser } from '../utils/dateParser'
 
 // Race configurations for scraping
 export interface RaceConfig {
@@ -352,8 +350,7 @@ export class PollingService {
       await this.updateRaceAggregates(raceId)
 
       // Invalidate relevant caches
-      await CacheInvalidation.invalidateRacePolls(raceId)
-      await CacheInvalidation.invalidateRaceForecast(raceId)
+      // Cache invalidation removed (no-op cache in MVP)
 
       logger.info({ race: config.slug, savedCount }, 'Race scrape completed')
     } catch (error) {
@@ -445,9 +442,7 @@ export class PollingService {
       total += count
     }
 
-    // Invalidate all poll caches
-    await CacheInvalidation.invalidatePolls()
-    await CacheInvalidation.invalidateForecasts()
+    // Cache invalidation removed (no-op cache in MVP)
 
     logger.info({ total, results }, 'All races scraped')
 

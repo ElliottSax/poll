@@ -86,8 +86,6 @@ export function RaceTrends({ trends, candidates }: RaceTrendsProps) {
         <TrendChart
           data={trends}
           lines={lines}
-          xAxisKey="date"
-          yAxisDomain={[0, 100]}
         />
       </div>
 

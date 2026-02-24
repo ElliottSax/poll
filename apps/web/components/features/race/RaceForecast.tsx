@@ -46,8 +46,8 @@ export function RaceForecast({ forecast }: RaceForecastProps) {
         <h4 className="text-sm font-medium text-muted-foreground mb-3">Win Probability</h4>
         <ProbabilityBar
           data={sortedCandidates.map((c) => ({
-            label: `${c.name} (${c.party})`,
-            value: c.winProbability,
+            name: `${c.name} (${c.party})`,
+            probability: c.winProbability,
             color: c.party === 'D' ? '#3b82f6' : c.party === 'R' ? '#ef4444' : '#9ca3af',
           }))}
         />

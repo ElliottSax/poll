@@ -21,10 +21,12 @@
     "lucide-react": "^0.294.0",
     "mapbox-gl": "^3.0.1",
     "next": "^14.2.33",
+    "next-themes": "^0.4.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
     "recharts": "^2.10.3",
+    "styled-jsx": "^5.1.7",
     "tailwind-merge": "^2.1.0",
     "zod": "^3.22.4",
     "zustand": "^4.4.7"

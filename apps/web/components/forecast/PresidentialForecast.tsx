@@ -43,13 +43,13 @@ export function PresidentialForecast({
           <ProbabilityBar
             data={[
               {
-                label: forecast.democrat.name,
-                value: forecast.democrat.winProbability,
+                name: forecast.democrat.name,
+                probability: forecast.democrat.winProbability,
                 color: '#3b82f6',
               },
               {
-                label: forecast.republican.name,
-                value: forecast.republican.winProbability,
+                name: forecast.republican.name,
+                probability: forecast.republican.winProbability,
                 color: '#ef4444',
               },
             ]}
@@ -95,8 +95,6 @@ export function PresidentialForecast({
               { dataKey: 'dem_prob', color: '#3b82f6', name: forecast.democrat.name },
               { dataKey: 'rep_prob', color: '#ef4444', name: forecast.republican.name },
             ]}
-            xAxisKey="date"
-            yAxisDomain={[0, 100]}
           />
         </div>
       </div>

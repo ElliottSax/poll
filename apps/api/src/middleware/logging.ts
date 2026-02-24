@@ -35,7 +35,7 @@ export async function logRequest(request: FastifyRequest, _reply: FastifyReply) 
     url: request.url,
     userAgent: request.headers['user-agent'],
     ip: request.ip,
-    userId: request.user?.id,
+    // userId removed (no auth in MVP)
   }, 'Incoming request')
 }
 
@@ -52,7 +52,7 @@ export async function logResponse(request: FastifyRequest, reply: FastifyReply) 
     url: request.url,
     statusCode: reply.statusCode,
     responseTime,
-    userId: request.user?.id,
+    // userId removed (no auth in MVP)
     ip: request.ip,
     userAgent: request.headers['user-agent'],
   }

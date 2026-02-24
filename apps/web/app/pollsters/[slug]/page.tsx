@@ -58,7 +58,7 @@ export default async function PollsterPage({ params }: Props) {
           <section>
             <h2 className="text-2xl font-bold mb-4">Accuracy History</h2>
             <Suspense fallback={<LoadingSpinner />}>
-              <PollsterAccuracyChart pollsterId={pollster.id} />
+              <PollsterAccuracyChart pollsterSlug={params.slug} />
             </Suspense>
           </section>
 

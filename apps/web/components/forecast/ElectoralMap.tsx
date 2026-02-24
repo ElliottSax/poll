@@ -15,8 +15,8 @@ interface StateData {
 
 interface ElectoralMapProps {
   states?: StateData[]
-  demElectoralVotes: number
-  repElectoralVotes: number
+  demElectoralVotes?: number
+  repElectoralVotes?: number
 }
 
 export function ElectoralMap({

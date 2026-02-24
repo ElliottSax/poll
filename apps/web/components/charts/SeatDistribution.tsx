@@ -188,13 +188,13 @@ export function SeatDistribution({
                 dataKey="value"
                 animationDuration={1500}
                 animationEasing="ease-out"
-                shape={(props: any) => (
+                {...({ shape: (props: any) => (
                   <Custom3DPieCell
                     {...props}
                     fill={props.payload?.color || props.fill}
                     index={props.index}
                   />
-                )}
+                )} as any)}
               />
               <Tooltip content={<CustomTooltip />} />
             </PieChart>

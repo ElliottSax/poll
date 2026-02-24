@@ -272,7 +272,7 @@ export async function pollsRoutes(
       })
 
       // Transform data for chart consumption
-      const chartData = polls.map((poll) => ({
+      const chartData = polls.map((poll: any) => ({
         id: poll.id,
         date: poll.pollDate.toISOString().split('T')[0],
         pollster: poll.pollster.name,
@@ -300,7 +300,7 @@ export async function pollsRoutes(
           state: race.state,
           electionDate: race.electionDate,
         },
-        candidates: race.candidates.map((c) => ({
+        candidates: race.candidates.map((c: any) => ({
           name: c.name,
           party: c.party,
           color: candidateColors[c.party] || '#6B7280',
@@ -312,7 +312,7 @@ export async function pollsRoutes(
             start: polls[0]?.pollDate.toISOString().split('T')[0] || null,
             end: polls[polls.length - 1]?.pollDate.toISOString().split('T')[0] || null,
           },
-          pollsters: [...new Set(polls.map((p) => p.pollster.name))],
+          pollsters: [...new Set(polls.map((p: any) => p.pollster.name))],
         },
       }
 

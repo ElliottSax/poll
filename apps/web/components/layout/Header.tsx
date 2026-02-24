@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation'
 import { Menu, X, User, Moon, Sun } from 'lucide-react'
 import { useState } from 'react'
 import { useTheme } from 'next-themes'
-import { useSession, signIn, signOut } from 'next-auth/react'
 
 interface NavigationItem {
   name: string
@@ -17,7 +16,6 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
   const { theme, setTheme } = useTheme()
-  const { data: session } = useSession()
 
   const navigation: NavigationItem[] = [
     { name: 'Home', href: '/' },
@@ -85,31 +83,7 @@ export function Header() {
               )}
             </button>
 
-            {/* User menu */}
-            {session ? (
-              <div className="flex items-center space-x-2">
-                <Link
-                  href="/dashboard"
-                  className="hidden md:flex items-center space-x-2 px-3 py-2 text-sm font-medium hover:text-primary rounded-lg hover:bg-muted/50 transition-all"
-                >
-                  <User className="h-5 w-5" />
-                  <span>{session.user?.name}</span>
-                </Link>
-                <button
-                  onClick={() => signOut()}
-                  className="text-sm font-medium text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg hover:bg-muted/50 transition-all"
-                >
-                  Sign Out
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => signIn()}
-                className="hidden md:block bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-semibold hover:shadow-premium transition-all duration-300 hover:scale-105"
-              >
-                Sign In
-              </button>
-            )}
+            {/* Auth removed in MVP */}
 
             {/* Mobile menu button */}
             <button
@@ -151,17 +125,7 @@ export function Header() {
                   )}
                 </Link>
               ))}
-              {!session && (
-                <button
-                  onClick={() => {
-                    signIn()
-                    setMobileMenuOpen(false)
-                  }}
-                  className="bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-4 py-3 rounded-lg text-base font-semibold hover:shadow-premium transition-all text-left mt-2"
-                >
-                  Sign In
-                </button>
-              )}
+              {/* Auth removed in MVP */}
             </div>
           </div>
         )}
