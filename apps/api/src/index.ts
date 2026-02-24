@@ -4,10 +4,8 @@ import helmet from '@fastify/helmet'
 import rateLimit from '@fastify/rate-limit'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
-import websocket from '@fastify/websocket'
 import { config } from './config/env'
 import { prisma } from './utils/prisma'
-import { redis } from './utils/redis'
 
 // Import middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
@@ -19,10 +17,6 @@ import { pollsRoutes } from './routes/polls'
 import { pollstersRoutes } from './routes/pollsters'
 import { forecastsRoutes } from './routes/forecasts'
 import { healthRoutes } from './routes/health'
-import { scraperRoutes } from './routes/scraper'
-
-// Import services
-import { initializeWebSocketService, WebSocketService } from './services/websocket'
 
 // Create Fastify instance with inline logger config
 const fastify = Fastify({
@@ -47,9 +41,6 @@ const fastify = Fastify({
   trustProxy: true,
 })
 
-// Global WebSocket service reference
-let wsService: WebSocketService | null = null
-
 // Graceful shutdown
 const closeGracefully = async (signal: string) => {
   fastify.log.info(`Received ${signal}, closing gracefully...`)
@@ -61,14 +52,8 @@ const closeGracefully = async (signal: string) => {
   }, 10000) // 10 seconds max
 
   try {
-    // Close WebSocket connections
-    if (wsService) {
-      await wsService.shutdown()
-    }
-
-    // Close other connections
+    // Close database connection
     await prisma.$disconnect()
-    await redis.quit()
     await fastify.close()
 
     clearTimeout(forceShutdownTimeout)
@@ -108,11 +93,7 @@ async function registerPlugins() {
     max: config.rateLimitMax,
     timeWindow: config.rateLimitWindow,
     cache: 10000,
-    redis,
   })
-
-  // WebSocket support
-  await fastify.register(websocket)
 
   // Swagger documentation
   await fastify.register(swagger, {
@@ -134,7 +115,6 @@ async function registerPlugins() {
         { name: 'polls', description: 'Poll endpoints' },
         { name: 'pollsters', description: 'Pollster endpoints' },
         { name: 'forecasts', description: 'Forecast endpoints' },
-        { name: 'scraper', description: 'Poll scraping and scheduling' },
       ],
     },
   })
@@ -163,7 +143,6 @@ async function registerRoutes() {
   await fastify.register(pollsRoutes, { prefix: '/api/polls' })
   await fastify.register(pollstersRoutes, { prefix: '/api/pollsters' })
   await fastify.register(forecastsRoutes, { prefix: '/api/forecasts' })
-  await fastify.register(scraperRoutes, { prefix: '/api/scraper' })
 }
 
 // Start server
@@ -173,18 +152,9 @@ async function start() {
     await prisma.$connect()
     fastify.log.info('Database connected successfully')
 
-    // Test Redis connection
-    await redis.ping()
-    fastify.log.info('Redis connected successfully')
-
     // Register plugins and routes
     await registerPlugins()
     await registerRoutes()
-
-    // Initialize WebSocket service
-    wsService = initializeWebSocketService(fastify)
-    await wsService.initialize()
-    fastify.log.info('WebSocket service initialized')
 
     // Start listening
     await fastify.listen({
@@ -194,7 +164,6 @@ async function start() {
 
     fastify.log.info(`Server running at http://${config.host}:${config.port}`)
     fastify.log.info(`API documentation at http://${config.host}:${config.port}/docs`)
-    fastify.log.info(`WebSocket available at ws://${config.host}:${config.port}/ws`)
   } catch (err) {
     fastify.log.error(err)
     process.exit(1)
