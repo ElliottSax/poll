@@ -4,6 +4,7 @@ import './globals.css'
 import { Providers } from './providers'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
+import { Analytics } from '@/components/Analytics'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -78,6 +79,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
+        <Analytics />
         <Providers>
           <div className="flex min-h-screen flex-col">
             <Header />

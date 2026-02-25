@@ -1,0 +1,16 @@
+name: Poll Scraper
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    name: Scrape Polling Data
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Trigger Scraper API
+        run: |
+          curl -X POST ${{ secrets.API_URL }}/api/scraper/run
