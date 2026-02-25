@@ -40,7 +40,9 @@
     "db:studio": "cd packages/database && npx prisma studio",
     "db:generate": "cd packages/database && npx prisma generate",
     "db:push": "cd packages/database && npx prisma db push",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "deploy:check": "./scripts/deploy-check.sh",
+    "deploy:migrate": "./scripts/deploy-migrate.sh"
   },
   "devDependencies": {
     "@commitlint/cli": "^18.4.3",
