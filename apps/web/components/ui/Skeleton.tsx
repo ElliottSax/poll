@@ -1,94 +1,68 @@
-import * as React from 'react'
-
-interface SkeletonProps {
-  className?: string
-  variant?: 'text' | 'circular' | 'rectangular'
-  width?: string | number
-  height?: string | number
-  animation?: 'pulse' | 'wave' | 'none'
-}
+import { cn } from '@/lib/utils'
 
 export function Skeleton({
-  className = '',
-  variant = 'rectangular',
-  width,
-  height,
-  animation = 'pulse',
-}: SkeletonProps) {
-  const variants = {
-    text: 'h-4',
-    circular: 'rounded-full',
-    rectangular: 'rounded',
-  }
-
-  const animations = {
-    pulse: 'animate-pulse',
-    wave: 'animate-shimmer',
-    none: '',
-  }
-
-  const style: React.CSSProperties = {}
-  if (width) style.width = typeof width === 'number' ? `${width}px` : width
-  if (height) style.height = typeof height === 'number' ? `${height}px` : height
-
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={`bg-gray-200 dark:bg-gray-700 ${variants[variant]} ${animations[animation]} ${className}`}
-      style={style}
+      className={cn('animate-pulse rounded-md bg-muted', className)}
+      {...props}
     />
   )
 }
 
-export function SkeletonText({ lines = 3, className = '' }: { lines?: number; className?: string }) {
+export function RaceCardSkeleton() {
   return (
-    <div className={`space-y-2 ${className}`}>
-      {Array.from({ length: lines }).map((_, i) => (
+    <div className="glass p-6 rounded-xl border">
+      <div className="flex items-center justify-between mb-4">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-5 w-20" />
+      </div>
+      <Skeleton className="h-4 w-32 mb-4" />
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+      </div>
+      <Skeleton className="h-2 w-full mt-4" />
+    </div>
+  )
+}
+
+export function PollCardSkeleton() {
+  return (
+    <div className="border rounded-lg p-4">
+      <div className="flex items-start justify-between mb-3">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-4 w-20" />
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/4" />
+      </div>
+      <div className="flex items-center gap-4 mt-3">
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-3 w-24" />
+      </div>
+    </div>
+  )
+}
+
+export function ChartSkeleton() {
+  return (
+    <div className="w-full h-[400px] flex items-end justify-between gap-2 p-4">
+      {[...Array(10)].map((_, i) => (
         <Skeleton
           key={i}
-          variant="text"
-          width={i === lines - 1 ? '80%' : '100%'}
+          className="w-full"
+          style={{ height: `${Math.random() * 80 + 20}%` }}
         />
-      ))}
-    </div>
-  )
-}
-
-export function SkeletonCard({ className = '' }: { className?: string }) {
-  return (
-    <div className={`bg-card border border-border rounded-lg p-6 ${className}`}>
-      <div className="flex items-center gap-4 mb-4">
-        <Skeleton variant="circular" width={48} height={48} />
-        <div className="flex-1">
-          <Skeleton variant="text" width="60%" className="mb-2" />
-          <Skeleton variant="text" width="40%" />
-        </div>
-      </div>
-      <SkeletonText lines={3} />
-    </div>
-  )
-}
-
-export function SkeletonTable({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
-  return (
-    <div className="space-y-3">
-      {/* Header */}
-      <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
-        {Array.from({ length: columns }).map((_, i) => (
-          <Skeleton key={`header-${i}`} variant="text" height={20} />
-        ))}
-      </div>
-
-      {/* Rows */}
-      {Array.from({ length: rows }).map((_, rowIndex) => (
-        <div
-          key={`row-${rowIndex}`}
-          className="grid gap-4"
-          style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
-        >
-          {Array.from({ length: columns }).map((_, colIndex) => (
-            <Skeleton key={`cell-${rowIndex}-${colIndex}`} variant="text" height={16} />
-          ))}
-        </div>
       ))}
     </div>
   )
