@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run db:generate --workspace=@poll/database && npm run build",
+  "buildCommand": "cd ../../packages/database && npx prisma generate && cd ../../apps/web && npm run build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
