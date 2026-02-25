@@ -40,7 +40,7 @@ const nextConfig = {
     ]
   },
 
-  // Headers for security
+  // Headers for security and performance
   async headers() {
     return [
       {
@@ -69,6 +69,44 @@ const nextConfig = {
           {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
+          },
+        ],
+      },
+      // Cache static assets aggressively
+      {
+        source: '/fonts/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/images/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      // Cache API responses with revalidation
+      {
+        source: '/api/races',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=300, stale-while-revalidate=600',
+          },
+        ],
+      },
+      {
+        source: '/api/polls',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=180, stale-while-revalidate=360',
           },
         ],
       },
